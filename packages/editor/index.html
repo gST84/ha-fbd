@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FBD Automation</title>
+<!-- All URLs are relative (no leading "/") so the page works behind Home Assistant Ingress. -->
+<link rel="icon" href="data:,">
+<script>/* apply the theme before the first paint */
+try{var m=localStorage.getItem("fbd.theme"),d=m==="dark";if(m!=="light"&&m!=="dark"){var h=null;try{var ha=window.parent!==window&&window.parent.document.querySelector("home-assistant");if(ha&&ha.hass&&ha.hass.themes)h=!!ha.hass.themes.darkMode}catch(e){}d=h!==null?h:window.matchMedia("(prefers-color-scheme: dark)").matches}document.documentElement.dataset.theme=d?"dark":"light"}catch(e){}</script>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="assets/app.js"></script>
+</body>
+</html>

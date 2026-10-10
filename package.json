@@ -1,0 +1,14 @@
+{
+  "name": "ha-fbd",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @ha-fbd/engine && npm run build -w @ha-fbd/editor && npm run build -w @ha-fbd/server",
+    "test": "npm run build -w @ha-fbd/engine && npm test --workspaces --if-present",
+    "package:addon": "node scripts/package-addon.mjs",
+    "dev:editor": "npm run dev -w @ha-fbd/editor"
+  }
+}
