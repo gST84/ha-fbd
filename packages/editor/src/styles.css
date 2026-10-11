@@ -25,6 +25,7 @@ input.invalid, textarea.invalid { border-color: var(--bad); }
 .app { display: grid; grid-template-rows: auto 1fr; height: 100%; }
 .top { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--bd);
   padding-top: calc(8px + env(safe-area-inset-top, 0px)); }
+.logo { flex: none; display: block; }
 .brand { font-size: 15px; margin-right: 6px; }
 .pill { padding: 1px 9px; border-radius: 99px; border: 1px solid var(--bd); font-size: 12px; }
 .pill.ok { color: var(--ok); border-color: var(--ok); } .pill.bad { color: var(--bad); border-color: var(--bad); }

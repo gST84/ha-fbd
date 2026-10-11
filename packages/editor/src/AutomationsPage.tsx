@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { get, send } from './api';
+import { Logo } from './Logo';
 import { ThemeSelect } from './ThemeSelect';
 import type { AutomationSummary, GlobalStatus } from './types';
 
@@ -40,6 +41,7 @@ export function AutomationsPage({ onOpen }: { onOpen(id: string): void }) {
   return (
     <div className="app autos">
       <header className="top">
+        <Logo />
         <b className="brand">FBD Automation</b>
         <span className={'pill ' + (global?.ha === 'connected' ? 'ok' : 'bad')} data-testid="ha-pill">HA {global?.ha ?? 'offline'}</span>
         {global && <span className="muted small">{global.automations.running} of {global.automations.total} running · {global.entities} entities</span>}

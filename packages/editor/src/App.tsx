@@ -13,6 +13,7 @@ import {
 } from './ops';
 import { Palette } from './Palette';
 import { Properties } from './Properties';
+import { Logo } from './Logo';
 import { ThemeSelect } from './ThemeSelect';
 import type { AreaInfo, AutomationStatus, ContextInfo, EntityInfo, Problem, Selection, WatchFrame } from './types';
 import { VariablesPanel } from './VariablesPanel';
@@ -232,6 +233,7 @@ export default function App({ id, onBack }: { id: string; onBack(): void }) {
   return (
     <div className="app">
       <header className="top">
+        <Logo />
         <button className="sec" onClick={onBack} data-testid="back" title="All automations">← Automations</button>
         <input className="auto-name" value={program.name ?? ''} spellCheck={false} aria-label="Automation name" placeholder="Name of this automation" data-testid="auto-name"
           onFocus={beginTx} onChange={e => edit(p => setName(p, e.target.value), 'drag')} />

@@ -1,5 +1,5 @@
 name: FBD Automation
-version: "0.5.0"
+version: "0.5.1"
 slug: ha_fbd
 description: IEC 61131-3 function block diagram editor and runtime for Home Assistant
 arch:
