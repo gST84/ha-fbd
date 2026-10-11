@@ -72,6 +72,22 @@ test('comparison, SEL, MUX, conversions', () => {
   assert.equal(v['mux.OUT'], 'c'); assert.equal(v['mux2.OUT'], 'c'); assert.equal(v['toi.OUT'], 7);
 });
 
+test('MOVE copies while EN is TRUE and holds the last value otherwise', () => {
+  const { io, rt } = setup(
+    [inBool('en', 'input_boolean.en'), inReal('src', 'sensor.src'), B('mv', 'MOVE'), B('free', 'MOVE', { IN: 'abc' })],
+    [w('en.OUT', 'mv.EN'), w('src.OUT', 'mv.IN')],
+  );
+  io.set('input_boolean.en', 'off'); io.set('sensor.src', '5');
+  let v = rt.scan().values;
+  assert.equal(v['mv.OUT'], 0, 'nothing copied yet'); assert.equal(v['mv.ENO'], false);
+  assert.equal(v['free.OUT'], 'abc', 'EN defaults to TRUE: plain pass-through of any type'); assert.equal(v['free.ENO'], true);
+  io.set('input_boolean.en', 'on'); v = rt.scan().values;
+  assert.equal(v['mv.OUT'], 5); assert.equal(v['mv.ENO'], true);
+  io.set('sensor.src', '9'); v = rt.scan().values; assert.equal(v['mv.OUT'], 9, 'follows IN while enabled');
+  io.set('input_boolean.en', 'off'); io.set('sensor.src', '42'); v = rt.scan().values;
+  assert.equal(v['mv.OUT'], 9, 'holds the last copied value'); assert.equal(v['mv.ENO'], false);
+});
+
 // ───────── timers ─────────
 test('TON delays Q and resets when IN drops', () => {
   const { io, rt, advance } = setup([inBool('a', 'input_boolean.a'), B('t', 'TON', { PT: '1s' })], [w('a.OUT', 't.IN')]);

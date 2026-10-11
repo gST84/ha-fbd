@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.5
+- New **MOVE** block (palette section *Selection*): copies IN to OUT while EN is TRUE and holds the last value while EN is FALSE. Works with any data type; EN is TRUE by default.
+
 ## 0.7.4
 - SET / RESET blocks show small icons for what they switch: lights, media players, switches, fans, climate (the chosen kinds for a room or zone, or the kind of the single entity).
 

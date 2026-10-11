@@ -605,6 +605,31 @@ K = 0 selects IN0, K = 1 selects IN1 … K is clamped to the available inputs. S
 
 *Example:* Scene number → brightness for that scene.
 
+### MOVE
+
+Copy a value while EN is TRUE; otherwise hold the last copied value.
+
+Works with any data type. While EN is TRUE, OUT follows IN every scan. When EN turns FALSE, OUT keeps the value it had – a sample-and-hold. EN is TRUE by default, so an unconnected EN makes MOVE a plain pass-through.
+
+**Inputs**
+
+| Pin | Type | Meaning |
+|---|---|---|
+| `EN` | BOOL | Enable: TRUE = copy IN to OUT (default TRUE) |
+| `IN` | ANY | Value to copy |
+
+**Outputs**
+
+| Pin | Type | Meaning |
+|---|---|---|
+| `ENO` | BOOL | TRUE in the scans where the value was copied (same as EN) |
+| `OUT` | ANY | The copied value; frozen while EN is FALSE |
+
+*Example:* Remember the brightness of a light at the moment a scene starts: EN = rising edge of the scene trigger, IN = brightness.
+
+- Before the first copy OUT is 0 / FALSE / empty text.
+- The held value is lost when the automation is stopped; wire OUT to a variable to keep it.
+
 ## Convert
 
 ### TO_BOOL

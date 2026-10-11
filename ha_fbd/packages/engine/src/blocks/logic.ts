@@ -1,4 +1,4 @@
-import type { BlockDef } from '../types.js';
+import type { BlockDef, Value } from '../types.js';
 import { coerce, countParam, indexed, pin, toBool, toNum } from '../helpers.js';
 
 const logicN = (type: string, description: string, fn: (v: boolean[]) => boolean): BlockDef => ({
@@ -78,6 +78,16 @@ const MUX: BlockDef = {
     return { OUT: i[`IN${k}`] };
   },
 };
+const MOVE: BlockDef<{ out?: Value }> = {
+  type: 'MOVE', category: 'Selection', description: 'Copy IN to OUT while EN is TRUE; OUT keeps its value while EN is FALSE',
+  inputs: () => [pin('EN', 'BOOL', true), pin('IN', 'ANY')],
+  outputs: () => [pin('ENO', 'BOOL'), pin('OUT', 'ANY')],
+  init: () => ({}),
+  exec: (i, s) => {
+    if (i.EN) s.out = i.IN;
+    return { ENO: !!i.EN, OUT: s.out };
+  },
+};
 
 const conv = (type: string, to: 'BOOL' | 'INT' | 'REAL' | 'STRING', description: string): BlockDef => ({
   type, category: 'Convert', description,
@@ -87,7 +97,7 @@ const conv = (type: string, to: 'BOOL' | 'INT' | 'REAL' | 'STRING', description:
 
 export const logicBlocks: BlockDef[] = [
   AND, OR, XOR, NOT, GT, GE, LT, LE, EQ, NE,
-  ADD, SUB, MUL, DIV, MOD, ABS, MIN, MAX, LIMIT, SEL, MUX,
+  ADD, SUB, MUL, DIV, MOD, ABS, MIN, MAX, LIMIT, SEL, MUX, MOVE,
   conv('TO_BOOL', 'BOOL', 'Convert to BOOL'), conv('TO_INT', 'INT', 'Convert to INT (truncates)'),
   conv('TO_REAL', 'REAL', 'Convert to REAL'), conv('TO_STRING', 'STRING', 'Convert to STRING'),
 ];
