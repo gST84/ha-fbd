@@ -12,6 +12,10 @@ export function AutomationsPage({ onOpen }: { onOpen(id: string): void }) {
   const [toast, setToast] = useState('');
   const nameRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const exportRef = useRef<HTMLTextAreaElement>(null);
+  const [exported, setExported] = useState<{ file: string; text: string } | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [pasted, setPasted] = useState('');
 
   const refresh = useCallback(async () => {
     try {
@@ -33,15 +37,37 @@ export function AutomationsPage({ onOpen }: { onOpen(id: string): void }) {
     refresh();
   };
   const duplicate = async (a: AutomationSummary) => { await send('POST', `automations/${a.id}/duplicate`); refresh(); };
-  // The server answers with "content-disposition: attachment", so following the link saves the file.
-  const download = (query = '') => { const a = document.createElement('a'); a.href = 'api/export' + query; a.download = ''; a.click(); };
-  const importFile = async (file: File | undefined) => {
-    if (!file) return;
+  // Export: try a normal file download, and always show the text as well – the Home Assistant apps
+  // (and some embedded browsers) silently ignore downloads from the add-on panel.
+  const exportNow = async (query = '') => {
+    try {
+      const r = await fetch('api/export' + query);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const text = await r.text();
+      const file = /filename="([^"]+)"/.exec(r.headers.get('content-disposition') ?? '')?.[1] ?? 'fbd-automations.fbd.json';
+      setImporting(false); setExported({ file, text });
+      saveFile(file, text);
+    } catch (e) { say(`Export failed: ${e instanceof Error ? e.message : e}`); }
+  };
+  const saveFile = (file: string, text: string) => {
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    const a = document.createElement('a'); a.href = url; a.download = file; a.style.display = 'none';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  };
+  const copyExport = async () => {
+    const el = exportRef.current; if (!el) return;
+    try { await navigator.clipboard.writeText(el.value); }
+    catch { el.focus(); el.select(); document.execCommand('copy'); }             // clipboard API is not always allowed in the panel iframe
+    say('Copied to the clipboard');
+  };
+  const importText = async (text: string, source: string) => {
     let body: unknown;
-    try { body = JSON.parse(await file.text()); } catch { say(`"${file.name}" is not a JSON file`); return; }
+    try { body = JSON.parse(text); } catch { say(`${source} is not valid JSON`); return; }
     const r = await send<{ imported?: { id: string; name: string }[]; error?: string }>('POST', 'import', body);
     const n = r.body?.imported?.length;
     say(n ? `Imported ${n} automation${n === 1 ? '' : 's'} (stopped – start them when you are ready)` : `Import failed: ${r.body?.error ?? 'unknown error'}`);
+    if (n) { setImporting(false); setPasted(''); }
     refresh();
   };
   const remove = async (a: AutomationSummary) => {
@@ -53,22 +79,47 @@ export function AutomationsPage({ onOpen }: { onOpen(id: string): void }) {
   return (
     <div className="app autos">
       <header className="top">
-        <Logo />
-        <b className="brand">FBD Automation</b>
+        <Logo /><b className="brand">FBD Automation</b>
         <span className={'pill ' + (global?.ha === 'connected' ? 'ok' : 'bad')} data-testid="ha-pill">HA {global?.ha ?? 'offline'}</span>
         {global && <span className="muted small">{global.automations.running} of {global.automations.total} running · {global.entities} entities</span>}
         <span className="grow" />
         <ThemeSelect />
-        <input ref={fileRef} type="file" accept=".json,application/json" hidden data-testid="import-file"
-          onChange={e => { importFile(e.target.files?.[0]); e.target.value = ''; }} />
-        <button className="sec" data-testid="import" title="Add the automations from an export file" onClick={() => fileRef.current?.click()}>Import</button>
-        <button className="sec" data-testid="export-all" title="Download all automations as one file" disabled={!list?.length} onClick={() => download()}>Export all</button>
+        <button className="sec" data-testid="import" title="Add the automations from an export file" onClick={() => { setExported(null); setImporting(true); }}>Import</button>
+        <button className="sec" data-testid="export-all" title="Export all automations as one file" disabled={!list?.length} onClick={() => exportNow()}>Export all</button>
         <button data-testid="new-automation" onClick={() => setCreating(true)}>+ New automation</button>
       </header>
       {toast && <div className="toast" data-testid="toast">{toast}</div>}
 
       <main className="auto-main">
         <h1>Automations</h1>
+        {exported && (
+          <div className="card" data-testid="export-card">
+            <label>Export – {exported.file}
+              <textarea ref={exportRef} className="export-text" readOnly value={exported.text} onFocus={e => e.target.select()} data-testid="export-text" />
+            </label>
+            <p className="muted small">The file should be in your downloads. If nothing was downloaded (this happens in the Home Assistant app), copy the text instead and paste it under <i>Import</i> on the other installation, or save it as a <code>.json</code> file.</p>
+            <div className="row">
+              <button type="button" onClick={copyExport} data-testid="export-copy">Copy text</button>
+              <button type="button" className="sec" onClick={() => saveFile(exported.file, exported.text)}>Download again</button>
+              <button type="button" className="sec" onClick={() => setExported(null)}>Close</button>
+            </div>
+          </div>
+        )}
+        {importing && (
+          <form className="card" data-testid="import-card" onSubmit={e => { e.preventDefault(); importText(pasted, 'The pasted text'); }}>
+            <label>Import automations
+              <textarea className="export-text" value={pasted} onChange={e => setPasted(e.target.value)} placeholder="Choose an export file, or paste the exported text here" data-testid="import-text" />
+            </label>
+            <p className="muted small">Imported automations are added as new, stopped automations. Nothing is overwritten.</p>
+            <input ref={fileRef} type="file" accept=".json,application/json" hidden data-testid="import-file"
+              onChange={async e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) importText(await f.text(), `"${f.name}"`); }} />
+            <div className="row">
+              <button type="button" onClick={() => fileRef.current?.click()} data-testid="import-choose">Choose file…</button>
+              <button type="submit" className="sec" disabled={!pasted.trim()} data-testid="import-pasted">Import pasted text</button>
+              <button type="button" className="sec" onClick={() => { setImporting(false); setPasted(''); }}>Cancel</button>
+            </div>
+          </form>
+        )}
         {creating && (
           <form className="card new" onSubmit={e => { e.preventDefault(); create(); }}>
             <label>Name of the new automation
@@ -105,7 +156,7 @@ export function AutomationsPage({ onOpen }: { onOpen(id: string): void }) {
                   <td className="actions">
                     <button className="sec" data-testid="open" onClick={() => onOpen(a.id)}>Edit</button>
                     <button className="sec" data-testid="toggle" onClick={() => toggle(a)}>{a.running ? 'Stop' : 'Start'}</button>
-                    <button className="icon" title="Export" data-testid="export-auto" onClick={() => download(`?id=${a.id}`)}>⭳</button>
+                    <button className="icon" title="Export" data-testid="export-auto" onClick={() => exportNow(`?id=${a.id}`)}>⭳</button>
                     <button className="icon" title="Duplicate" onClick={() => duplicate(a)}>⧉</button>
                     <button className="icon" title="Delete" data-testid="delete-auto" onClick={() => remove(a)}>✕</button>
                   </td>

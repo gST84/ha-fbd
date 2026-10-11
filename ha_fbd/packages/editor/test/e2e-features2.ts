@@ -139,7 +139,9 @@ try {
   assert.equal(await page.locator('[data-palette="AREA_OUT"]').count(), 0, 'no separate ROOM OUT block any more');
   await add('RESET');
   await page.getByTestId('p-target').selectOption('room');
-  await page.getByTestId('p-area').selectOption('living_room');
+  const opts = (await page.getByTestId('p-area').locator('option').allTextContents()).map(t => t.replace(/\u00a0/g, ' '));
+  assert.deepEqual(opts, ['— select —', 'Zone: Ground floor (all rooms)', '   – Living room', 'Rooms without a zone', '   – Kitchen'], 'zone first, its rooms below it');
+  await page.getByTestId('p-area').selectOption('area:living_room');
   const preview = (await page.getByTestId('area-preview').textContent())!;
   assert.ok(preview.includes('2 devices') && preview.includes('light.sofa') && preview.includes('media_player.tv'), preview);
   assert.ok(!preview.includes('switch.lamp') && !preview.includes('light.stove'), 'only lights + media players of THIS room');
@@ -154,7 +156,26 @@ try {
   assert.deepEqual(area.map(c => `${c.domain}.${c.service}`).sort(), ['light.turn_off', 'media_player.turn_off']);
   await sleep(300);
   assert.equal(calls.filter(c => c.target?.area_id).length, 2, 'fired once, not every scan');
+  // a whole zone (floor) instead of one room
+  await page.getByTestId('p-area').selectOption('floor:ground_floor');
+  const zonePreview = (await page.getByTestId('area-preview').textContent())!;
+  assert.ok(zonePreview.includes('Ground floor') && zonePreview.includes('light.sofa') && zonePreview.includes('media_player.tv') && !zonePreview.includes('light.stove'), zonePreview);
+  assert.match((await page.locator('[data-block="reset_1"] .sub').textContent())!, /zone ground floor/);
+  await page.getByTestId('deploy').click();
+  await waitUntil(() => calls.filter(c => c.target?.floor_id === 'ground_floor').length === 2, 'two floor calls');
+  assert.deepEqual(calls.filter(c => c.target?.floor_id).map(c => `${c.domain}.${c.service}`).sort(), ['light.turn_off', 'media_player.turn_off']);
   await shot('13-room');
+
+  // ───── 4b. PID controller ─────
+  await page.keyboard.press('Control+a'); await page.keyboard.press('Delete');
+  await add('PID');
+  assert.ok(await page.locator('h3', { hasText: /^Control$/i }).count() > 0, 'a Control section in the palette');
+  await page.getByTestId('const-KP').fill('20');
+  await page.getByTestId('const-TI').fill('10m');
+  assert.match((await page.getByTestId('props').textContent())!, /PID/);
+  await page.getByTestId('const-KP').blur();
+  assert.equal(await page.getByTestId('const-KP').inputValue(), '20');
+  await shot('15-pid');
 
   // ───── 5. light / dark mode ─────
   await page.getByTestId('toggle-run').click();

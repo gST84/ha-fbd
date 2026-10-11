@@ -12,6 +12,7 @@
 - [Edge](#edge)
 - [Bistable](#bistable)
 - [Counters](#counters)
+- [Control](#control)
 
 ## Variables & I/O
 
@@ -95,7 +96,7 @@ The value is stored at the END of the scan, so blocks that read the same variabl
 
 Set a BOOL variable (or switch an entity / a whole room ON) while IN is TRUE.
 
-Like a SET coil in TIA Portal. With a variable target it forces the variable TRUE every scan IN is TRUE, and the variable keeps TRUE afterwards until a RESET block clears it. With an entity target it turns the entity on at the rising edge of IN. With a room target every selected kind of device (lights, media players, switches, fans, climate) in the chosen Home Assistant area is turned on at the rising edge of IN – Home Assistant looks up the devices itself.
+Like a SET coil in TIA Portal. With a variable target it forces the variable TRUE every scan IN is TRUE, and the variable keeps TRUE afterwards until a RESET block clears it. With an entity target it turns the entity on at the rising edge of IN. With a room target every selected kind of device (lights, media players, switches, fans, climate) in the chosen Home Assistant area – or in a whole zone (floor, all its rooms) – is turned on at the rising edge of IN. Home Assistant looks up the devices itself.
 
 **Inputs**
 
@@ -105,14 +106,14 @@ Like a SET coil in TIA Portal. With a variable target it forces the variable TRU
 
 *Example:* Doorbell pressed → SET "visitor"; "visitor seen" → RESET "visitor".
 
-- Room target: choose which kinds of devices are affected – "switch" may also include sockets of e.g. a fridge. The area must exist in Home Assistant (Settings → Areas).
+- Room target: choose which kinds of devices are affected – "switch" may also include sockets of e.g. a fridge. The area must exist in Home Assistant (Settings → Areas). Zones are Home Assistant floors (Settings → Areas → Floors); pick a zone to affect all rooms on it.
 - If SET and RESET on the same variable are both TRUE, the block that comes later in the program wins.
 
 ### RESET
 
 Reset a BOOL variable (or switch an entity / a whole room OFF) while IN is TRUE.
 
-Counterpart of SET. With a variable target it forces the variable FALSE while IN is TRUE. With an entity target it turns the entity off at the rising edge of IN. With a room target every selected kind of device in the chosen Home Assistant area is switched off at the rising edge of IN.
+Counterpart of SET. With a variable target it forces the variable FALSE while IN is TRUE. With an entity target it turns the entity off at the rising edge of IN. With a room target every selected kind of device in the chosen Home Assistant area – or in a whole zone (floor, all its rooms) – is switched off at the rising edge of IN.
 
 **Inputs**
 
@@ -120,7 +121,7 @@ Counterpart of SET. With a variable target it forces the variable FALSE while IN
 |---|---|---|
 | `IN` | BOOL | Condition |
 
-*Example:* Good-night button → RESET room "living room": lights + media players off.
+*Example:* Good-night button → RESET room "living room": lights + media players off. Leaving home → RESET zone "Ground floor": all lights off.
 
 ### EVENT_IN
 
@@ -932,3 +933,37 @@ CU counts up, CD counts down, R resets to 0, LD loads PV. If CU and CD pulse at 
 | `CV` | INT | Current count |
 
 *Example:* People in a room: entry sensor counts up, exit sensor counts down.
+
+## Control
+
+### PID
+
+PID controller: keeps PV at SP by adjusting OUT.
+
+Positional PID: OUT = KP · ( e + (1/TI) · ∫e dt + TD · d(−PV)/dt ) with e = SP − PV, limited to OUT_MIN … OUT_MAX. Typical use: SP = wanted temperature, PV = measured temperature, OUT = heating power (0–100 %). Use TI = 0 for a P(D) controller and TD = 0 for a PI controller. The derivative works on the measurement (no jump when you change the setpoint) and is smoothed. The integral part is held back while OUT sits at a limit (anti-windup). The calculation uses the real time between scans, so the scan interval does not change the behaviour.
+
+**Inputs**
+
+| Pin | Type | Meaning |
+|---|---|---|
+| `SP` | REAL | Setpoint – the value you want |
+| `PV` | REAL | Process value – the measured value |
+| `KP` | REAL | Proportional gain. Negative = reverse action (cooling: more output when PV is above SP) |
+| `TI` | TIME | Integral time. 0 = no integral part. Type e.g. 120s, 10m or milliseconds |
+| `TD` | TIME | Derivative time. 0 = no derivative part |
+| `OUT_MIN` | REAL | Lowest output (default 0) |
+| `OUT_MAX` | REAL | Highest output (default 100) |
+| `EN` | BOOL | FALSE resets the controller and sets OUT to OUT_MIN (default TRUE) |
+
+**Outputs**
+
+| Pin | Type | Meaning |
+|---|---|---|
+| `OUT` | REAL | Controller output, always between OUT_MIN and OUT_MAX |
+| `ERR` | REAL | Control error SP − PV |
+
+*Example:* ENTITY_IN sensor.room_temp → PV, CONST 21 → SP, KP 20, TI 10m → OUT → ENTITY_OUT (value) on a valve or dimmer.
+
+- Start with only KP (TI = 0, TD = 0), raise it until the response is quick without oscillating, then add a long TI to remove the remaining offset.
+- For slow processes like room heating use a TI of many minutes and leave TD at 0.
+- Connect OUT to an ENTITY_OUT of kind "value" (e.g. a valve position, thermostat setpoint or light brightness) or compare it with a threshold for on/off control.

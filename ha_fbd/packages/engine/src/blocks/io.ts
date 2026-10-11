@@ -1,6 +1,6 @@
 import type { BlockDef, DataType, OutputCommand, Value } from '../types.js';
 import { attributeDef, domainOf } from '../attributes.js';
-import { areaCheck, areaDomains } from './home.js';
+import { areaCheck, areaDomains, areaTarget } from './home.js';
 import { coerce, pin, toBool, toNum, zeroOf } from '../helpers.js';
 
 const DATA_TYPES: DataType[] = ['BOOL', 'INT', 'REAL', 'STRING', 'TIME'];
@@ -128,7 +128,7 @@ const VAR_WRITE: BlockDef = {
  * SET / RESET "coils" (like S / R in TIA Portal).
  *  target "variable": while IN is TRUE the BOOL variable is forced to TRUE (SET) or FALSE (RESET); it keeps the value afterwards.
  *  target "entity":   on a rising edge of IN the entity is switched on (SET) or off (RESET).
- *  target "room":     on a rising edge of IN every selected kind of device in a Home Assistant area is switched on (SET) or off (RESET).
+ *  target "room":     on a rising edge of IN every selected kind of device in a Home Assistant area (or a whole zone = floor, param floorId) is switched on (SET) or off (RESET).
  */
 const coil = (type: 'SET' | 'RESET'): BlockDef<{ prev: boolean }> => ({
   type, category: 'Variables & I/O',
@@ -145,7 +145,7 @@ const coil = (type: 'SET' | 'RESET'): BlockDef<{ prev: boolean }> => ({
     const value = type === 'SET';
     if (ctx.params.target === 'room') {
       const skip = ctx.firstScan && !ctx.writeOnFirstScan;
-      if (on && !s.prev && !skip) ctx.emit({ kind: 'area', blockId: ctx.blockId, areaId: String(ctx.params.areaId), domains: areaDomains(ctx.params), action: value ? 'turn_on' : 'turn_off' });
+      if (on && !s.prev && !skip) ctx.emit({ kind: 'area', blockId: ctx.blockId, ...areaTarget(ctx.params), domains: areaDomains(ctx.params), action: value ? 'turn_on' : 'turn_off' });
       s.prev = on;
     } else if (ctx.params.target === 'entity') {
       const skip = ctx.firstScan && !ctx.writeOnFirstScan;

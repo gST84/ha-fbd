@@ -19,7 +19,7 @@ Wires never form a loop inside one scan – use a **variable** for feedback (wri
 
 Create a new automation, start or stop it, duplicate it or delete it. The header shows whether Home Assistant is connected.
 
-**Export / import.** *Export all* downloads every automation as one `.fbd.json` file; the ⭳ button on a row exports just that automation. *Import* adds the automations from such a file as **new, stopped** automations – nothing is overwritten, so importing the same file twice gives you copies. The file holds the programs only: whether an automation was running and the current values of its variables are not included. Use it as a backup or to move automations to another installation.
+**Export / import.** *Export all* exports every automation as one `.fbd.json` file; the ⭳ button on a row exports just that automation. The file is downloaded and the same content is shown as text: the Home Assistant apps ignore downloads from an add-on panel, so there you use *Copy text* instead. *Import* takes an export file or pasted text and adds the automations as **new, stopped** automations – nothing is overwritten, so importing the same export twice gives you copies. An export holds the programs only: whether an automation was running and the current values of its variables are not included. Use it as a backup or to move automations to another installation.
 
 ## The editor
 
@@ -62,7 +62,7 @@ While it runs, wires and blocks that are TRUE turn green and values are printed 
 | `TIME_OF_DAY` | TRUE inside a time window (also past midnight, optionally only on chosen weekdays) in Home Assistant's time zone. Also gives the current time and weekday. |
 
 ### Switch a whole room
-Use **SET** or **RESET** with target **Room**: choose the area and which kinds of devices are affected (lights, media players, switches, fans, climate). RESET switches everything off, SET on – on a rising edge of `IN`. Home Assistant resolves the area itself, so devices you add to the room later are included.
+Use **SET** or **RESET** with target **Room / zone**: choose a **zone** (a Home Assistant floor – the dropdown lists each zone with its rooms indented below it) or a single room, and which kinds of devices are affected (lights, media players, switches, fans, climate). RESET switches everything off, SET on – on a rising edge of `IN`. Home Assistant resolves the room or zone itself, so devices you add later are included. Rooms are managed under *Settings → Areas, Labels & Zones*; assign rooms to a floor there to make them show up under a zone.
 
 ![Room switching](screenshots/room.png)
 
@@ -70,6 +70,23 @@ Use **SET** or **RESET** with target **Room**: choose the area and which kinds o
 ![Time of day](screenshots/time-of-day.png)
 
 `TIME_OF_DAY` sits in the **Timers** section. Use `R_TRIG` on its `Q` output to do something once at the start time.
+
+## PID control
+![PID block](screenshots/pid.png)
+
+The `PID` block (palette section **Control**) keeps a measured value at a setpoint, for example a room temperature:
+
+| Pin | Meaning |
+|---|---|
+| `SP` / `PV` | Setpoint (wanted) and process value (measured) |
+| `KP` | Proportional gain. A negative value acts in reverse (cooling) |
+| `TI` | Integral time (`10m`, `120s`, …). `0` = no integral part |
+| `TD` | Derivative time. `0` = no derivative part (usually fine for room heating) |
+| `OUT_MIN` / `OUT_MAX` | Output limits (default 0 – 100) |
+| `EN` | `FALSE` resets the controller and holds `OUT_MIN` |
+| `OUT` / `ERR` | Controller output and the error `SP − PV` |
+
+**Example – floor heating valve:** `ENTITY_IN sensor.room_temp` → `PV`; `SP` = 21; `KP` = 20; `TI` = 15m; `OUT` → `ENTITY_OUT` of kind *value* on the valve position. Tune by raising `KP` until the response is quick but not oscillating, then add a long `TI` to remove the remaining offset. The integral part stops growing while the output sits at a limit (anti-windup), and the maths uses the real time between scans, so the scan interval does not change the behaviour.
 
 ## Themes
 The theme selector (top right) is **Auto** (follows your Home Assistant light / dark setting), **Light** or **Dark**.

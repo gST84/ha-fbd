@@ -4,7 +4,8 @@ import { silentLogger, type Logger } from './log.js';
 
 export interface HAEntity extends EntityState { entity_id: string }
 /** A room (Home Assistant area) with the entities that live in it (directly or through their device). */
-export interface AreaInfo { id: string; name: string; entities: string[] }
+export interface AreaInfo { id: string; name: string; entities: string[]; floorId?: string | null }
+export interface FloorInfo { id: string; name: string; level?: number | null }
 
 /** The tiny subset of the WebSocket API we use (Node's global WebSocket and the `ws` package both fit). */
 export interface WSLike {
@@ -38,7 +39,7 @@ export class HAClient extends EventEmitter implements IOAdapter {
   status: HAStatus = 'disconnected';
   /** Home Assistant's IANA time zone (from get_config) – used by time-of-day blocks. */
   timeZone?: string;
-  private areaCache?: { at: number; data: AreaInfo[] };
+  private areaCache?: { at: number; data: AreaInfo[]; floors: FloorInfo[] };
   private ws?: WSLike;
   private ready = false;
   private stopped = true;
@@ -80,23 +81,31 @@ export class HAClient extends EventEmitter implements IOAdapter {
   }
 
   /** Rooms with their entities, cached for 30 s. Needs an admin token; rejects when Home Assistant refuses. */
-  async getAreas(): Promise<AreaInfo[]> {
-    if (this.areaCache && Date.now() - this.areaCache.at < 30_000) return this.areaCache.data;
+  async getAreas(): Promise<AreaInfo[]> { return (await this.loadAreas()).data; }
+
+  /** Zones (Home Assistant floors, since 2024.4) that group rooms. Empty on older versions. */
+  async getFloors(): Promise<FloorInfo[]> { return (await this.loadAreas()).floors; }
+
+  private async loadAreas(): Promise<{ data: AreaInfo[]; floors: FloorInfo[] }> {
+    if (this.areaCache && Date.now() - this.areaCache.at < 30_000) return this.areaCache;
     if (this.status !== 'connected') throw new Error('Home Assistant is not connected');
-    const [areas, entities, devices] = await Promise.all([
+    const [areas, entities, devices, floorList] = await Promise.all([
       this.request<any[]>({ type: 'config/area_registry/list' }),
       this.request<any[]>({ type: 'config/entity_registry/list' }),
       this.request<any[]>({ type: 'config/device_registry/list' }),
+      this.request<any[]>({ type: 'config/floor_registry/list' }).catch(() => [] as any[]),
     ]);
+    const floors: FloorInfo[] = floorList.map(f => ({ id: String(f.floor_id), name: String(f.name ?? f.floor_id), level: f.level ?? null }))
+      .sort((x, y) => (x.level ?? 0) - (y.level ?? 0) || x.name.localeCompare(y.name));
     const deviceArea = new Map<string, string | null>(devices.map(d => [d.id, d.area_id ?? null]));
     const data = areas.map(a => ({
-      id: String(a.area_id), name: String(a.name ?? a.area_id),
+      id: String(a.area_id), name: String(a.name ?? a.area_id), floorId: a.floor_id ? String(a.floor_id) : null,
       entities: entities
         .filter(e => !e.disabled_by && (e.area_id ? e.area_id === a.area_id : !!e.device_id && deviceArea.get(e.device_id) === a.area_id))
         .map(e => String(e.entity_id)).sort(),
     })).sort((x, y) => x.name.localeCompare(y.name));
-    this.areaCache = { at: Date.now(), data };
-    return data;
+    this.areaCache = { at: Date.now(), data, floors };
+    return this.areaCache;
   }
 
   request<T = unknown>(msg: Record<string, unknown>, timeoutMs = 10_000): Promise<T> {

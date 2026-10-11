@@ -41,12 +41,21 @@ const TIME_OF_DAY: BlockDef = {
 // ───────── a whole room ─────────
 export const AREA_DOMAINS = ['light', 'media_player', 'switch', 'fan', 'climate'] as const;
 export const AREA_ACTIONS = ['turn_off', 'turn_on'] as const;
+/** Zone (Home Assistant floor) id when the block targets a whole zone; undefined for a single room. */
+const floorOf = (p: Record<string, unknown>): string | undefined =>
+  typeof p.floorId === 'string' && /^[a-z0-9_]+$/.test(p.floorId) ? p.floorId : undefined;
+/** The part of an area command that says WHERE: the zone when one is chosen, otherwise the room. */
+export const areaTarget = (p: Record<string, unknown>): { areaId: string } | { floorId: string } => {
+  const f = floorOf(p);
+  return f ? { floorId: f } : { areaId: String(p.areaId) };
+};
 export const areaDomains = (p: Record<string, unknown>): string[] =>
   Array.isArray(p.domains) ? (p.domains as unknown[]).map(String) : ['light', 'media_player'];
 
 /** Shared by SET / RESET (target "room") and the legacy AREA_OUT block. */
 export function areaCheck(p: Record<string, unknown>): string | undefined {
-  if (typeof p.areaId !== 'string' || !/^[a-z0-9_]+$/.test(p.areaId)) return 'pick the room (area)';
+  const floor = floorOf(p);
+  if (floor === undefined && (typeof p.areaId !== 'string' || !/^[a-z0-9_]+$/.test(p.areaId))) return 'pick the room (area) or zone (floor)';
   const d = areaDomains(p);
   if (d.length === 0) return 'pick at least one kind of device';
   const bad = d.find(x => !(AREA_DOMAINS as readonly string[]).includes(x));
@@ -74,7 +83,7 @@ const AREA_OUT: BlockDef<{ prev: boolean }> = {
     const on = toBool(i.EN);
     const skip = ctx.firstScan && !ctx.writeOnFirstScan;
     if (on && !s.prev && !skip) {
-      ctx.emit({ kind: 'area', blockId: ctx.blockId, areaId: String(ctx.params.areaId), domains: areaDomains(ctx.params), action: ctx.params.action === 'turn_on' ? 'turn_on' : 'turn_off' });
+      ctx.emit({ kind: 'area', blockId: ctx.blockId, ...areaTarget(ctx.params), domains: areaDomains(ctx.params), action: ctx.params.action === 'turn_on' ? 'turn_on' : 'turn_off' });
     }
     s.prev = on;
   },

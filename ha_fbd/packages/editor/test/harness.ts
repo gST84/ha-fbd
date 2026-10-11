@@ -32,7 +32,8 @@ wss.on('connection', (ws: any) => {
     else if (m.type === 'unsubscribe_events') ok(null);
     else if (m.type === 'fire_event') { fired.push(m); ok({}); }
     else if (m.type === 'get_config') ok({ time_zone: 'Europe/Brussels' });
-    else if (m.type === 'config/area_registry/list') ok([{ area_id: 'living_room', name: 'Living room' }, { area_id: 'kitchen', name: 'Kitchen' }]);
+    else if (m.type === 'config/area_registry/list') ok([{ area_id: 'living_room', name: 'Living room', floor_id: 'ground_floor' }, { area_id: 'kitchen', name: 'Kitchen' }]);
+    else if (m.type === 'config/floor_registry/list') ok([{ floor_id: 'ground_floor', name: 'Ground floor', level: 0 }]);
     else if (m.type === 'config/device_registry/list') ok([{ id: 'dev_tv', area_id: 'living_room' }]);
     else if (m.type === 'config/entity_registry/list') ok([
       { entity_id: 'light.sofa', area_id: 'living_room' }, { entity_id: 'media_player.tv', device_id: 'dev_tv' },

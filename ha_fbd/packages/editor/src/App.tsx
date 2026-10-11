@@ -15,7 +15,7 @@ import { Palette } from './Palette';
 import { Properties } from './Properties';
 import { Logo } from './Logo';
 import { ThemeSelect } from './ThemeSelect';
-import type { AreaInfo, AutomationStatus, ContextInfo, EntityInfo, Problem, Selection, WatchFrame } from './types';
+import type { AreaInfo, FloorInfo, AutomationStatus, ContextInfo, EntityInfo, Problem, Selection, WatchFrame } from './types';
 import { VariablesPanel } from './VariablesPanel';
 
 type SaveState = 'saved' | 'saving' | 'dirty' | 'error';
@@ -41,7 +41,7 @@ export default function App({ id, onBack }: { id: string; onBack(): void }) {
   const [tab, setTab] = useState<'blocks' | 'vars'>('blocks');
   const [status, setStatus] = useState<AutomationStatus | null>(null);
   const [entities, setEntities] = useState<EntityInfo[]>([]);
-  const [areas, setAreas] = useState<{ list: AreaInfo[]; error?: string }>({ list: [] });
+  const [areas, setAreas] = useState<{ list: AreaInfo[]; floors: FloorInfo[]; error?: string }>({ list: [], floors: [] });
   const [ctx, setCtx] = useState<ContextInfo | null>(null);
   const [problems, setProblems] = useState<Problem[]>([]);
   const [saveState, setSaveState] = useState<SaveState>('saved');
@@ -81,7 +81,7 @@ export default function App({ id, onBack }: { id: string; onBack(): void }) {
     return () => clearInterval(t);
   }, []);
   useEffect(() => {
-    const load = () => get<{ areas: AreaInfo[]; error?: string }>('areas').then(r => setAreas({ list: r.body?.areas ?? [], error: r.body?.error })).catch(() => {});
+    const load = () => get<{ areas: AreaInfo[]; floors?: FloorInfo[]; error?: string }>('areas').then(r => setAreas({ list: r.body?.areas ?? [], floors: r.body?.floors ?? [], error: r.body?.error })).catch(() => {});
     load(); const t = setInterval(load, 60000);
     return () => clearInterval(t);
   }, []);
@@ -282,7 +282,7 @@ export default function App({ id, onBack }: { id: string; onBack(): void }) {
         <div className="resizer" data-testid="resize-right" title="Drag to resize · double-click to reset" onPointerDown={startResize('r')} onDoubleClick={() => setWr(310)} />
         <aside className="side right">
           <h2>Properties</h2>
-          <Properties program={program} selection={sel} entities={entities} problems={problems} areas={areas.list} areasError={areas.error} edit={edit} beginTx={beginTx} onClear={() => setSel(null)} />
+          <Properties program={program} selection={sel} entities={entities} problems={problems} areas={areas.list} floors={areas.floors} areasError={areas.error} edit={edit} beginTx={beginTx} onClear={() => setSel(null)} />
           <h2>Problems <span className={'badge' + (problems.length ? ' bad' : '')} data-testid="problem-count">{problems.length}</span></h2>
           {problems.length === 0 && <p className="hint">No problems found.</p>}
           <ul className="problems">

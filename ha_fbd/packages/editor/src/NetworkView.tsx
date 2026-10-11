@@ -29,7 +29,7 @@ export interface NetworkProps {
 const catClass = (type: string) =>
   type === 'ENTITY_IN' || type === 'ENTITY_OUT' || type === 'EVENT_IN' || type === 'EVENT_OUT' || type === 'AREA_OUT' ? 'io'
   : ['VAR_READ', 'VAR_WRITE', 'CONST', 'SET', 'RESET'].includes(type) ? 'var'
-  : ['Timers', 'Counters', 'Edge', 'Bistable'].includes(registry[type]?.category ?? '') ? 'seq' : 'fn';
+  : ['Timers', 'Counters', 'Edge', 'Bistable', 'Control'].includes(registry[type]?.category ?? '') ? 'seq' : 'fn';
 
 const zero = (t: PinType): Value => (t === 'BOOL' ? false : t === 'STRING' ? '' : 0);
 function fmt(v: Value | undefined): string {

@@ -60,7 +60,8 @@ function fakeHA(token = 'secret') {
       else if (m.type === 'subscribe_events') { subs.push({ id: m.id, type: m.event_type }); ok(); }
       else if (m.type === 'unsubscribe_events') { unsubs.push(m.subscription); ok(); }
       else if (m.type === 'get_config') ok({ time_zone: 'Europe/Brussels' });
-      else if (m.type === 'config/area_registry/list') ok([{ area_id: 'living_room', name: 'Living room' }, { area_id: 'kitchen', name: 'Kitchen' }]);
+      else if (m.type === 'config/area_registry/list') ok([{ area_id: 'living_room', name: 'Living room', floor_id: 'ground' }, { area_id: 'kitchen', name: 'Kitchen' }]);
+      else if (m.type === 'config/floor_registry/list') ok([{ floor_id: 'upstairs', name: 'Upstairs', level: 1 }, { floor_id: 'ground', name: 'Ground floor', level: 0 }]);
       else if (m.type === 'config/device_registry/list') ok([{ id: 'dev_tv', area_id: 'living_room' }, { id: 'dev_oven', area_id: 'kitchen' }]);
       else if (m.type === 'config/entity_registry/list') ok([
         { entity_id: 'light.sofa', area_id: 'living_room' },                       // entity placed directly in the room
@@ -142,6 +143,8 @@ test('HAClient: time zone, rooms with their entities (direct and via device), se
   assert.deepEqual(areas.map(a => a.id), ['kitchen', 'living_room'], 'sorted by name');
   assert.deepEqual(areas.find(a => a.id === 'living_room')!.entities, ['light.sofa', 'media_player.tv']);
   assert.deepEqual(areas.find(a => a.id === 'kitchen')!.entities, ['light.moved', 'switch.oven']);
+  assert.equal(areas.find(a => a.id === 'living_room')!.floorId, 'ground'); assert.equal(areas.find(a => a.id === 'kitchen')!.floorId, null);
+  assert.deepEqual((await c.getFloors()).map(f => f.id), ['ground', 'upstairs'], 'zones (floors) sorted by level');
   assert.equal(await c.getAreas(), areas, 'cached for a while');
   await c.callService('light', 'turn_off', {}, undefined, { area_id: 'living_room' });
   assert.deepEqual([fake.calls.at(-1).domain, fake.calls.at(-1).target], ['light', { area_id: 'living_room' }]);
@@ -186,7 +189,8 @@ class FakeHA extends EventEmitter {
   listEntities() { return [...this.ents.values()]; }
   timeZone = 'UTC';
   async callService(domain: string, service: string, data: Record<string, unknown> = {}, entityId?: string, target?: Record<string, unknown>) { this.calls.push({ domain, service, data, entityId, target }); }
-  async getAreas() { return [{ id: 'living_room', name: 'Living room', entities: ['light.sofa', 'media_player.tv'] }]; }
+  async getAreas() { return [{ id: 'living_room', name: 'Living room', entities: ['light.sofa', 'media_player.tv'], floorId: 'ground' }]; }
+  async getFloors() { return [{ id: 'ground', name: 'Ground floor', level: 0 }]; }
   async fireEvent(type: string, data: Record<string, unknown> = {}) { this.fired.push({ type, data }); }
   setEventTypes(types: Iterable<string>) { this.eventTypes = [...types].sort(); }
 }
@@ -257,6 +261,20 @@ test('host: a room command becomes one service call per device kind with an area
   await waitFor(() => ha.calls.length >= 2, 2000, 'two calls');
   await sleep(100);
   assert.deepEqual(ha.calls.map(c => [c.domain, c.service, c.target]), [['light', 'turn_off', { area_id: 'living_room' }], ['media_player', 'turn_off', { area_id: 'living_room' }]]);
+  await host.stop();
+});
+
+test('host: a zone (floor) command targets floor_id', async () => {
+  const ha = new FakeHA();
+  const host = mkHost(ha, new Store(tmp()));
+  await host.init();
+  const zone: Program = { version: 1, name: 'Zone', variables: [], networks: [{ id: 'n', title: '',
+    blocks: [{ id: 'c', type: 'CONST', params: { dataType: 'BOOL', value: true } },
+      { id: 'r', type: 'RESET', params: { target: 'room', floorId: 'ground', domains: ['light'] } }],
+    wires: [{ from: { block: 'c', pin: 'OUT' }, to: { block: 'r', pin: 'IN' } }] }] };
+  await host.deploy(zone);
+  await waitFor(() => ha.calls.length >= 1, 2000, 'one call');
+  assert.deepEqual(ha.calls.map(c => [c.domain, c.service, c.target]), [['light', 'turn_off', { floor_id: 'ground' }]]);
   await host.stop();
 });
 
@@ -390,7 +408,7 @@ test('HTTP API: automations CRUD, validate / deploy / start / stop, SSE watch, s
 
   assert.deepEqual((await j('/api/status')).body, { ha: 'connected', entities: 2, automations: { total: 0, running: 0 } });
   assert.ok((await j('/api/blocks')).body.find((b: any) => b.type === 'EVENT_IN').doc.summary);
-  assert.deepEqual((await j('/api/areas')).body, { areas: [{ id: 'living_room', name: 'Living room', entities: ['light.sofa', 'media_player.tv'] }] });
+  assert.deepEqual((await j('/api/areas')).body, { areas: [{ id: 'living_room', name: 'Living room', entities: ['light.sofa', 'media_player.tv'], floorId: 'ground' }], floors: [{ id: 'ground', name: 'Ground floor', level: 0 }] });
   assert.deepEqual((await j('/api/entities')).body.find((e: any) => e.entity_id === 'light.x'), { entity_id: 'light.x', state: 'on', name: 'Light X' });
 
   const created = await post('/api/automations', { name: 'Test one' });

@@ -13,7 +13,7 @@
 
 ### Coming from the local add-on
 
-The store add-on is a different add-on than the *local* one (other slug, own `/data` folder), so your automations do not move along automatically. Move them with export / import: update the local add-on to 0.5.2 or newer, click **Export all** on its automations page, install the store add-on and **Import** the file there. Imported automations are stopped; start them after you have stopped (or uninstalled) the local add-on, otherwise both add-ons drive the same entities.
+The store add-on is a different add-on than the *local* one (other slug, own `/data` folder), so your automations do not move along automatically. Move them with export / import: update the local add-on to 0.7.2 or newer, click **Export all** on its automations page, install the store add-on and **Import** the file there. Imported automations are stopped; start them after you have stopped (or uninstalled) the local add-on, otherwise both add-ons drive the same entities.
 
 ## Install as a local add-on (development builds)
 

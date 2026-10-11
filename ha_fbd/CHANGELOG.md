@@ -1,11 +1,17 @@
 # Changelog
 
-## 0.5.2
-- **Export / import** on the automations page: download one or all automations as a `.fbd.json` file and import them again (also on another installation). Imported automations are added as new, stopped automations.
+## 0.7.2
+- **Export / import** on the automations page: export one or all automations as a `.fbd.json` file and import them again (also on another installation). The export is also shown as text to copy and import accepts pasted text, because the Home Assistant apps ignore file downloads from an add-on panel. Imported automations are added as new, stopped automations.
 - The GitHub repository is now a Home Assistant add-on repository: add `https://github.com/gST84/ha-fbd` to the add-on store to install and update, no more copying folders.
 
+## 0.7.0
+- New **PID** block (palette section *Control*): setpoint, process value, KP, integral time TI, derivative time TD, output limits and enable. Anti-windup, derivative on the measurement, time-step independent, negative KP for reverse (cooling) action.
+
+## 0.6.0
+- SET / RESET with target *Room* can now also switch a whole **zone** (Home Assistant floor): the dropdown lists each zone with its rooms indented below it, followed by rooms that have no zone. Uses `floor_id` as the service target.
+
 ## 0.5.1
-- The add-on icon is shown at the top left of the toolbar (automations page and editor).
+- Add-on icon in the top bar of the automations page and the editor, and as browser tab icon.
 
 ## 0.5.0
 - Room (area) switching is now part of **SET** and **RESET** (target *Room*): SET turns everything on, RESET turns everything off. The separate ROOM OUT block is hidden; existing programs are converted automatically.

@@ -3,7 +3,7 @@ import { JsonField, SelectField, TextField } from './fields';
 import { DAY_NAMES, layout } from './geometry';
 import type { Edit } from './history';
 import { deleteBlock, deleteBlocks, deleteWire, setParams } from './ops';
-import type { AreaInfo, EntityInfo, Problem, Selection } from './types';
+import type { AreaInfo, EntityInfo, FloorInfo, Problem, Selection } from './types';
 
 const COUNT_BLOCKS = new Set(['AND', 'OR', 'XOR', 'ADD', 'MUL', 'MIN', 'MAX', 'MUX']);
 const DATA_TYPES = ['BOOL', 'INT', 'REAL', 'STRING'].map(value => ({ value }));
@@ -21,11 +21,11 @@ const DOMAIN_LABELS: Record<string, string> = { light: 'Lights', media_player: '
 
 interface Props {
   program: Program; selection: Selection | null; entities: EntityInfo[]; problems: Problem[];
-  areas: AreaInfo[]; areasError?: string;
+  areas: AreaInfo[]; floors: FloorInfo[]; areasError?: string;
   edit: Edit; beginTx(): void; onClear(): void;
 }
 
-export function Properties({ program, selection, entities, problems, areas, areasError, edit, beginTx, onClear }: Props) {
+export function Properties({ program, selection, entities, problems, areas, floors, areasError, edit, beginTx, onClear }: Props) {
   if (!selection) return <p className="hint">Select a block or a wire to edit it. Shift-click or drag a box to select several; Ctrl/⌘ + C, X, V copy, cut and paste.</p>;
   const net = program.networks.find(n => n.id === selection.net);
   if (!net) return null;
@@ -71,35 +71,53 @@ export function Properties({ program, selection, entities, problems, areas, area
   const attrs = attributesOf(domain);
   const boolVars = program.variables.filter(v => v.type === 'BOOL');
 
-  /** Room (area) target of SET / RESET: pick the area and which kinds of devices it affects. */
+  /** Room (area) or zone (floor) target of SET / RESET: pick where, and which kinds of devices it affects. */
   const roomFields = (isSet: boolean) => {
-        const areaId = str('areaId');
-        const domains = Array.isArray(params.domains) ? (params.domains as string[]) : ['light', 'media_player'];
-        const area = areas.find(a => a.id === areaId);
-        const affected = area ? area.entities.filter(e => domains.includes(domainOf(e))) : [];
-        const toggleDomain = (d: string) => commit({ domains: domains.includes(d) ? domains.filter(x => x !== d) : AREA_DOMAINS.filter(x => x === d || domains.includes(x)) });
-        return <>
-          {areas.length
-            ? <SelectField label="Room (area)" testId="p-area" value={areaId}
-                options={[{ value: '', label: '— select —' }, ...(areaId && !area ? [{ value: areaId, label: `${areaId} (not found)` }] : []), ...areas.map(a => ({ value: a.id, label: a.name }))]}
-                onChange={v => commit({ areaId: v })} />
-            : <TextField label="Room (area id)" testId="p-area" value={areaId} placeholder="living_room" beginTx={beginTx} onChange={v => typing({ areaId: v.trim() })}
-                hint={areasError ? `Could not load the rooms (${areasError}). Type the area id instead, e.g. living_room.` : 'No rooms found in Home Assistant – type the area id.'} />}
-          <div className="field"><span>Affects</span>
-            <div className="days">
-              {AREA_DOMAINS.map(d => (
-                <label key={d} className={domains.includes(d) ? 'on' : undefined}>
-                  <input type="checkbox" data-testid={`domain-${d}`} checked={domains.includes(d)} onChange={() => toggleDomain(d)} />{DOMAIN_LABELS[d]}
-                </label>))}
-            </div>
-          </div>
-          {area && (
-            <p className="hint" data-testid="area-preview">
-              {affected.length === 0 ? 'No matching devices in this room right now.' : `${affected.length} device${affected.length === 1 ? '' : 's'} in “${area.name}”: `}
-              {affected.slice(0, 12).join(', ')}{affected.length > 12 ? ` … +${affected.length - 12} more` : ''}
-            </p>)}
-          <p className="hint">{isSet ? 'Switches everything ON' : 'Switches everything OFF'} when IN rises. Home Assistant looks up the devices of the room itself, so devices you add later are included.</p>
-        </>;
+    const areaId = str('areaId'), floorId = str('floorId');
+    const domains = Array.isArray(params.domains) ? (params.domains as string[]) : ['light', 'media_player'];
+    const area = areas.find(a => a.id === areaId);
+    const floor = floors.find(f => f.id === floorId);
+    const zoneAreas = floorId ? areas.filter(a => a.floorId === floorId) : [];
+    const scope = floorId ? [...new Set(zoneAreas.flatMap(a => a.entities))] : area?.entities ?? [];
+    const affected = scope.filter(e => domains.includes(domainOf(e))).sort();
+    const toggleDomain = (d: string) => commit({ domains: domains.includes(d) ? domains.filter(x => x !== d) : AREA_DOMAINS.filter(x => x === d || domains.includes(x)) });
+    const IND = '\u00a0\u00a0\u00a0– ';
+    const known = floorId ? !!floor : !!area;
+    const options: { value: string; label?: string }[] = [{ value: '', label: '— select —' }];
+    if (!known && (areaId || floorId)) options.push({ value: floorId ? `floor:${floorId}` : `area:${areaId}`, label: `${floorId || areaId} (not found)` });
+    for (const f of floors) {
+      options.push({ value: `floor:${f.id}`, label: `Zone: ${f.name} (all rooms)` });
+      for (const a of areas.filter(x => x.floorId === f.id)) options.push({ value: `area:${a.id}`, label: IND + a.name });
+    }
+    const loose = floors.length ? areas.filter(a => !a.floorId || !floors.some(f => f.id === a.floorId)) : areas;
+    if (floors.length && loose.length) options.push({ value: '__other', label: 'Rooms without a zone' });
+    for (const a of loose) options.push({ value: `area:${a.id}`, label: (floors.length ? IND : '') + a.name });
+    const current = floorId ? `floor:${floorId}` : areaId ? `area:${areaId}` : '';
+    const pick = (v: string) => {
+      if (v === '__other') return;
+      if (v.startsWith('floor:')) commit({ floorId: v.slice(6), areaId: undefined });
+      else commit({ areaId: v.startsWith('area:') ? v.slice(5) : '', floorId: undefined });
+    };
+    return <>
+      {areas.length
+        ? <SelectField label={floors.length ? 'Zone or room' : 'Room (area)'} testId="p-area" value={current} options={options} onChange={pick} />
+        : <TextField label="Room (area id)" testId="p-area" value={areaId} placeholder="living_room" beginTx={beginTx} onChange={v => typing({ areaId: v.trim() })}
+            hint={areasError ? `Could not load the rooms (${areasError}). Type the area id instead, e.g. living_room.` : 'No rooms found in Home Assistant – type the area id.'} />}
+      <div className="field"><span>Affects</span>
+        <div className="days">
+          {AREA_DOMAINS.map(d => (
+            <label key={d} className={domains.includes(d) ? 'on' : undefined}>
+              <input type="checkbox" data-testid={`domain-${d}`} checked={domains.includes(d)} onChange={() => toggleDomain(d)} />{DOMAIN_LABELS[d]}
+            </label>))}
+        </div>
+      </div>
+      {(area || floor) && (
+        <p className="hint" data-testid="area-preview">
+          {affected.length === 0 ? `No matching devices in this ${floor ? 'zone' : 'room'} right now.` : `${affected.length} device${affected.length === 1 ? '' : 's'} in “${(floor ?? area)!.name}”: `}
+          {affected.slice(0, 12).join(', ')}{affected.length > 12 ? ` … +${affected.length - 12} more` : ''}
+        </p>)}
+      <p className="hint">{isSet ? 'Switches everything ON' : 'Switches everything OFF'} when IN rises. Home Assistant looks up the devices of the {floor ? 'zone (all its rooms)' : 'room'} itself, so devices you add later are included.</p>
+    </>;
   };
 
   return (
@@ -157,10 +175,10 @@ export function Properties({ program, selection, entities, problems, areas, area
 
       {(b.type === 'SET' || b.type === 'RESET') && <>
         <SelectField label="Target" testId="p-target" value={str('target') || 'variable'}
-          options={[{ value: 'variable', label: 'BOOL variable (latches)' }, { value: 'entity', label: 'Home Assistant entity (on rising edge)' }, { value: 'room', label: 'Room – all devices of an area (on rising edge)' }]}
-          onChange={v => commit(v === 'entity' ? { target: 'entity', name: undefined, varType: undefined, areaId: undefined, domains: undefined }
-            : v === 'room' ? { target: 'room', name: undefined, varType: undefined, entityId: undefined, areaId: '', domains: ['light', 'media_player'] }
-            : { target: 'variable', entityId: undefined, areaId: undefined, domains: undefined, name: boolVars[0]?.name ?? '', varType: 'BOOL' })} />
+          options={[{ value: 'variable', label: 'BOOL variable (latches)' }, { value: 'entity', label: 'Home Assistant entity (on rising edge)' }, { value: 'room', label: 'Room / zone (on rising edge)' }]}
+          onChange={v => commit(v === 'entity' ? { target: 'entity', name: undefined, varType: undefined, areaId: undefined, floorId: undefined, domains: undefined }
+            : v === 'room' ? { target: 'room', name: undefined, varType: undefined, entityId: undefined, areaId: '', floorId: undefined, domains: ['light', 'media_player'] }
+            : { target: 'variable', entityId: undefined, areaId: undefined, floorId: undefined, domains: undefined, name: boolVars[0]?.name ?? '', varType: 'BOOL' })} />
         {str('target') === 'room' ? roomFields(b.type === 'SET') : (str('target') || 'variable') === 'variable'
           ? (boolVars.length === 0
             ? <p className="error">Declare a BOOL variable first (Variables tab).</p>

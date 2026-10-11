@@ -86,8 +86,8 @@ export function createHttpServer({ manager, publicDir, ingressOnly = false }: Se
       }
       if (route === 'GET /api/blocks') return send(res, 200, listBlocks());
       if (route === 'GET /api/areas') {
-        try { return send(res, 200, { areas: await manager.ha.getAreas() }); }
-        catch (e) { return send(res, 200, { areas: [], error: e instanceof Error ? e.message : String(e) }); }   // the editor falls back to typing the area id
+        try { return send(res, 200, { areas: await manager.ha.getAreas(), floors: await manager.ha.getFloors() }); }
+        catch (e) { return send(res, 200, { areas: [], floors: [], error: e instanceof Error ? e.message : String(e) }); }   // the editor falls back to typing the area id
       }
       if (route === 'GET /api/entities') {
         return send(res, 200, manager.ha.listEntities().map(e => ({

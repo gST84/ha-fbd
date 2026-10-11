@@ -4,7 +4,7 @@ import {
   type CompileError, type HAEvent, type IOAdapter, type OutputCommand, type Program, type ScanResult, type Value,
 } from '@ha-fbd/engine';
 import { commandToServiceCall } from './commands.js';
-import type { AreaInfo, HAEntity, HAStatus } from './ha-client.js';
+import type { AreaInfo, FloorInfo, HAEntity, HAStatus } from './ha-client.js';
 import { silentLogger, type Logger } from './log.js';
 import { emptyProgram, type Store } from './store.js';
 
@@ -14,6 +14,7 @@ export interface HAPort extends IOAdapter {
   readonly timeZone?: string;
   callService(domain: string, service: string, data?: Record<string, unknown>, entityId?: string, target?: Record<string, unknown>): Promise<unknown>;
   getAreas(): Promise<AreaInfo[]>;
+  getFloors(): Promise<FloorInfo[]>;
   listEntities(): HAEntity[];
   fireEvent(eventType: string, data?: Record<string, unknown>): Promise<unknown>;
   setEventTypes(types: Iterable<string>): void;
@@ -221,8 +222,8 @@ export class ProgramHost extends EventEmitter {
   private async exec(cmd: OutputCommand): Promise<void> {
     try {
       if (cmd.kind === 'event') { await this.opts.ha.fireEvent(cmd.eventType, cmd.data); return; }
-      if (cmd.kind === 'area') {      // one call per kind of device; Home Assistant resolves the room itself
-        const results = await Promise.allSettled(cmd.domains.map(d => this.opts.ha.callService(d, cmd.action, {}, undefined, { area_id: cmd.areaId })));
+      if (cmd.kind === 'area') {      // one call per kind of device; Home Assistant resolves the room (or the whole zone / floor) itself
+        const results = await Promise.allSettled(cmd.domains.map(d => this.opts.ha.callService(d, cmd.action, {}, undefined, cmd.floorId ? { floor_id: cmd.floorId } : { area_id: cmd.areaId })));
         const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
         if (failed) throw failed.reason;
         return;

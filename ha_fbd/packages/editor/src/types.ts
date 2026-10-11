@@ -21,5 +21,7 @@ export interface WatchFrame {
 }
 
 /** A room (Home Assistant area) and the entities that live in it. */
-export interface AreaInfo { id: string; name: string; entities: string[] }
+export interface AreaInfo { id: string; name: string; entities: string[]; floorId?: string | null }
+/** A zone (Home Assistant floor) that groups rooms. */
+export interface FloorInfo { id: string; name: string; level?: number | null }
 export interface ContextInfo { x: number; y: number; net: string; lx: number; ly: number; blockId?: string }

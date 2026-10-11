@@ -23,7 +23,7 @@ export function subtitleOf(b: BlockInst): string {
       return p.entityId ? String(p.entityId) : '⚠ pick entity';
     case 'SET':
     case 'RESET':
-      if (p.target === 'room') return p.areaId ? String(p.areaId).replace(/_/g, ' ') : '⚠ pick room';
+      if (p.target === 'room') return p.floorId ? `zone ${String(p.floorId).replace(/_/g, ' ')}` : p.areaId ? String(p.areaId).replace(/_/g, ' ') : '⚠ pick room or zone';
       return p.target === 'entity' ? (p.entityId ? String(p.entityId) : '⚠ pick entity') : (p.name ? `$${String(p.name)}` : '⚠ pick variable');
     case 'TIME_OF_DAY': {
       const a = String(p.start ?? '00:00'), z = String(p.end ?? '00:00');

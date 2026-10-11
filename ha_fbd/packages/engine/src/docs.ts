@@ -150,13 +150,13 @@ export const BLOCK_DOCS: Record<string, BlockDoc> = {
     inputs: { IN: 'New value' }, example: 'Remember "last mode" for the next scan.',
   },
   SET: {
-    summary: 'Set a BOOL variable (or switch an entity / a whole room ON) while IN is TRUE.', details: 'Like a SET coil in TIA Portal. With a variable target it forces the variable TRUE every scan IN is TRUE, and the variable keeps TRUE afterwards until a RESET block clears it. With an entity target it turns the entity on at the rising edge of IN. With a room target every selected kind of device (lights, media players, switches, fans, climate) in the chosen Home Assistant area is turned on at the rising edge of IN – Home Assistant looks up the devices itself.',
+    summary: 'Set a BOOL variable (or switch an entity / a whole room ON) while IN is TRUE.', details: 'Like a SET coil in TIA Portal. With a variable target it forces the variable TRUE every scan IN is TRUE, and the variable keeps TRUE afterwards until a RESET block clears it. With an entity target it turns the entity on at the rising edge of IN. With a room target every selected kind of device (lights, media players, switches, fans, climate) in the chosen Home Assistant area – or in a whole zone (floor, all its rooms) – is turned on at the rising edge of IN. Home Assistant looks up the devices itself.',
     inputs: { IN: 'Condition' }, example: 'Doorbell pressed → SET "visitor"; "visitor seen" → RESET "visitor".',
-    notes: ['Room target: choose which kinds of devices are affected – "switch" may also include sockets of e.g. a fridge. The area must exist in Home Assistant (Settings → Areas).', 'If SET and RESET on the same variable are both TRUE, the block that comes later in the program wins.'],
+    notes: ['Room target: choose which kinds of devices are affected – "switch" may also include sockets of e.g. a fridge. The area must exist in Home Assistant (Settings → Areas). Zones are Home Assistant floors (Settings → Areas → Floors); pick a zone to affect all rooms on it.', 'If SET and RESET on the same variable are both TRUE, the block that comes later in the program wins.'],
   },
   RESET: {
-    summary: 'Reset a BOOL variable (or switch an entity / a whole room OFF) while IN is TRUE.', details: 'Counterpart of SET. With a variable target it forces the variable FALSE while IN is TRUE. With an entity target it turns the entity off at the rising edge of IN. With a room target every selected kind of device in the chosen Home Assistant area is switched off at the rising edge of IN.',
-    inputs: { IN: 'Condition' }, example: 'Good-night button → RESET room "living room": lights + media players off.',
+    summary: 'Reset a BOOL variable (or switch an entity / a whole room OFF) while IN is TRUE.', details: 'Counterpart of SET. With a variable target it forces the variable FALSE while IN is TRUE. With an entity target it turns the entity off at the rising edge of IN. With a room target every selected kind of device in the chosen Home Assistant area – or in a whole zone (floor, all its rooms) – is switched off at the rising edge of IN.',
+    inputs: { IN: 'Condition' }, example: 'Good-night button → RESET room "living room": lights + media players off. Leaving home → RESET zone "Ground floor": all lights off.',
   },
   EVENT_IN: {
     summary: 'React to a Home Assistant event.', details: 'Q is TRUE for exactly one scan when an event of this type arrives. Use "match" to filter on the event data, and "valuePath" to read a field of the event into VAL (e.g. "command").',
@@ -175,6 +175,22 @@ export const BLOCK_DOCS: Record<string, BlockDoc> = {
     inputs: { EN: 'Rising edge triggers the action' },
     example: 'Good-night button → ROOM OUT living room: lights + media players off.',
     notes: ['Choose which kinds of devices are affected – "switch" may also include sockets of e.g. a fridge.', 'The area must exist in Home Assistant (Settings → Areas).'],
+  },
+  PID: {
+    summary: 'PID controller: keeps PV at SP by adjusting OUT.',
+    details: 'Positional PID: OUT = KP · ( e + (1/TI) · ∫e dt + TD · d(−PV)/dt ) with e = SP − PV, limited to OUT_MIN … OUT_MAX. Typical use: SP = wanted temperature, PV = measured temperature, OUT = heating power (0–100 %). Use TI = 0 for a P(D) controller and TD = 0 for a PI controller. The derivative works on the measurement (no jump when you change the setpoint) and is smoothed. The integral part is held back while OUT sits at a limit (anti-windup). The calculation uses the real time between scans, so the scan interval does not change the behaviour.',
+    inputs: {
+      SP: 'Setpoint – the value you want', PV: 'Process value – the measured value', KP: 'Proportional gain. Negative = reverse action (cooling: more output when PV is above SP)',
+      TI: 'Integral time. 0 = no integral part. Type e.g. 120s, 10m or milliseconds', TD: 'Derivative time. 0 = no derivative part',
+      OUT_MIN: 'Lowest output (default 0)', OUT_MAX: 'Highest output (default 100)', EN: 'FALSE resets the controller and sets OUT to OUT_MIN (default TRUE)',
+    },
+    outputs: { OUT: 'Controller output, always between OUT_MIN and OUT_MAX', ERR: 'Control error SP − PV' },
+    example: 'ENTITY_IN sensor.room_temp → PV, CONST 21 → SP, KP 20, TI 10m → OUT → ENTITY_OUT (value) on a valve or dimmer.',
+    notes: [
+      'Start with only KP (TI = 0, TD = 0), raise it until the response is quick without oscillating, then add a long TI to remove the remaining offset.',
+      'For slow processes like room heating use a TI of many minutes and leave TD at 0.',
+      'Connect OUT to an ENTITY_OUT of kind "value" (e.g. a valve position, thermostat setpoint or light brightness) or compare it with a threshold for on/off control.',
+    ],
   },
   EVENT_OUT: {
     summary: 'Fire a Home Assistant event.', details: 'On a rising edge of IN an event with this type and data is fired on the Home Assistant bus. Other automations (or your own EVENT_IN) can listen to it.',

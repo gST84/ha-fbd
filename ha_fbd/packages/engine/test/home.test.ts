@@ -74,6 +74,15 @@ test('SET / RESET with target room: on/off the whole area on a rising edge', () 
   assert.deepEqual(quiet.scan().commands, [], 'respects writeOnFirstScan = false');
 });
 
+test('SET / RESET with a zone (floor): the command targets floorId and validates', () => {
+  const run = (type: string, params: Record<string, unknown>) =>
+    new Runtime(prog([B('c', 'CONST', { dataType: 'BOOL', value: true }), B('r', type, { target: 'room', ...params })], [w('c.OUT', 'r.IN')]), { io }).scan().commands;
+  assert.deepEqual(run('RESET', { floorId: 'ground_floor', domains: ['light'] }), [{ kind: 'area', blockId: 'r', floorId: 'ground_floor', domains: ['light'], action: 'turn_off' }]);
+  assert.deepEqual(run('SET', { floorId: 'ground_floor', areaId: 'ignored' }), [{ kind: 'area', blockId: 'r', floorId: 'ground_floor', domains: ['light', 'media_player'], action: 'turn_on' }], 'a zone wins over a room');
+  const err = (p: Record<string, unknown>) => compileProgram(prog([B('r', 'SET', { target: 'room', ...p })])).errors.map(e => e.message).join();
+  assert.equal(err({ floorId: 'upstairs' }), ''); assert.match(err({ floorId: 'Up Stairs' }), /pick the room/); assert.match(err({}), /zone/);
+});
+
 test('TIME_OF_DAY lives in Timers; AREA_OUT is hidden from the palette', () => {
   assert.equal(registry.TIME_OF_DAY.category, 'Timers');
   assert.ok(!listBlocks().some(b => b.type === 'AREA_OUT') && listBlocks().some(b => b.type === 'TIME_OF_DAY'));

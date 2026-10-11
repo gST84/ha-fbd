@@ -44,7 +44,7 @@ export type OutputCommand =
   | { kind: 'attribute'; blockId: string; entityId: string; attribute: string; value: Value }
   | { kind: 'service'; blockId: string; service: string; entityId?: string; data: Record<string, unknown> }
   | { kind: 'event'; blockId: string; eventType: string; data: Record<string, unknown> }
-  | { kind: 'area'; blockId: string; areaId: string; domains: string[]; action: 'turn_on' | 'turn_off' };
+  | { kind: 'area'; blockId: string; areaId?: string; floorId?: string; domains: string[]; action: 'turn_on' | 'turn_off' };   // a room (areaId) or a whole zone (floorId)
 
 export interface ExecContext {
   params: Record<string, unknown>;

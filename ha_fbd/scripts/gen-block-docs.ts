@@ -3,7 +3,7 @@
 import { writeFileSync } from 'node:fs';
 import { listBlocks, pinDoc } from '../packages/engine/src/index.js';
 
-const ORDER = ['Variables & I/O', 'Logic', 'Compare', 'Math', 'Selection', 'Convert', 'Timers', 'Edge', 'Bistable', 'Counters'];
+const ORDER = ['Variables & I/O', 'Logic', 'Compare', 'Math', 'Selection', 'Convert', 'Timers', 'Edge', 'Bistable', 'Counters', 'Control'];
 const blocks = listBlocks();
 const cats = [...new Set(blocks.map(b => b.category))].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
 const pinTable = (title: string, b: (typeof blocks)[number], side: 'inputs' | 'outputs') => {

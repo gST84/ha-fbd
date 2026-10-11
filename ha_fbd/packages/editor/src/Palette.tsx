@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { listBlocks, pinDoc, type BlockInfo } from '@ha-fbd/engine';
 
-const ORDER = ['Variables & I/O', 'Logic', 'Compare', 'Math', 'Selection', 'Convert', 'Timers', 'Edge', 'Bistable', 'Counters'];
+const ORDER = ['Variables & I/O', 'Logic', 'Compare', 'Math', 'Selection', 'Convert', 'Timers', 'Edge', 'Bistable', 'Counters', 'Control'];
 
 interface Hover { info: BlockInfo; top: number; left: number }
 

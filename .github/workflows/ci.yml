@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      browser_e2e:
+        description: "Also run the browser end-to-end tests"
+        type: boolean
+        default: false
+
+# The add-on folder ha_fbd/ is the npm workspace root.
+defaults:
+  run:
+    working-directory: ha_fbd
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ha_fbd/package.json
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run build
+      - name: Block reference is up to date
+        run: |
+          npx tsx scripts/gen-block-docs.ts
+          git diff --exit-code ../docs/BLOCKS.md
+      - run: node scripts/package-addon.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ha_fbd-addon
+          path: dist-addon/ha_fbd/
+
+  browser-e2e:
+    if: github.event_name == 'workflow_dispatch' && inputs.browser_e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm install --no-save playwright && npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Run browser tests
+        working-directory: ha_fbd/packages/editor
+        env:
+          SHOTS: ${{ github.workspace }}/shots
+        run: for t in e2e e2e-features e2e-features2; do npx tsx test/$t.ts; done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: shots/

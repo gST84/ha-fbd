@@ -26,7 +26,7 @@
 
 ## packages/server
 - **HAClient** – websocket authentication, entity state cache, event subscriptions, `fireEvent`, areas (area / device / entity registries, so devices inherit their device's area), time zone, `callService` (with `target`).
-- **ProgramHost** – runs one automation: scan timer, deploy / start / stop, log, translates `OutputCommand`s to service calls (`area` → one call per device kind with `target: { area_id }`).
+- **ProgramHost** – runs one automation: scan timer, deploy / start / stop, log, translates `OutputCommand`s to service calls (`area` → one call per device kind with `target: { area_id }` or, for a zone, `{ floor_id }`).
 - **AutomationManager** – many automations, legacy migration, restart of the ones that were running.
 - **Store** – `automations/<id>.json` (program) and `state/<id>.json` (run flag and *retain* variables) below `DATA_DIR` (`/data` in the add-on).
 - **HTTP** – static editor + JSON API, `INGRESS_ONLY=1` restricts access to the Supervisor's ingress address.
@@ -42,7 +42,7 @@
 | `GET /automations/:id/watch` | Server-Sent Events with live values |
 | `GET /export`, `GET /export?id=:id` | download all / one automation as an export file (`{ format: "ha-fbd-export", version: 1, automations: Program[] }`) |
 | `POST /import` | export file or a single program → new, stopped automations |
-| `GET /status`, `GET /entities`, `GET /areas`, `GET /blocks` | data for the editor |
+| `GET /status`, `GET /entities`, `GET /areas` (rooms + zones/floors), `GET /blocks` | data for the editor |
 
 ## packages/editor
 - `ops.ts` – pure, immutable program edits (add / move / wire / paste / change type / migrate legacy blocks); everything the UI changes goes through here, which makes undo / redo trivial (`history.ts`).

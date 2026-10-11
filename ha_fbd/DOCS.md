@@ -17,7 +17,8 @@ Program Home Assistant automations as IEC 61131-3 function block diagrams.
 - Right-click a block or the canvas for copy / cut / paste / delete. Ctrl/⌘ + C / X / V work too; shift-click or drag a box to select several; the side panels can be resized.
 
 - **Time of day** (in the Timers section) gives TRUE inside a time window (also past midnight, optionally only on chosen weekdays) in Home Assistant's own time zone.
-- **SET / RESET with target “Room”** switch all lights / media players / switches / fans / climate devices of a Home Assistant area on (SET) or off (RESET) when the input rises. The rooms are read from Home Assistant (Settings → Areas). Older “Room out” blocks are converted automatically.
+- **SET / RESET with target “Room”** switch all lights / media players / switches / fans / climate devices of a Home Assistant room (area) – or of a whole **zone** (floor, with all its rooms) – on (SET) or off (RESET) when the input rises. Rooms and zones are read from Home Assistant (Settings → Areas, Zones & Labels → Floors); the dropdown lists each zone with its rooms below it. Older “Room out” blocks are converted automatically.
+- **PID** (section *Control*) is a basic PID controller: connect the measured value to `PV`, set `SP`, `KP`, and optionally `TI` / `TD`; `OUT` stays between `OUT_MIN` and `OUT_MAX`. See the block help for tuning tips.
 - The theme (top right) is **Auto** (follows your Home Assistant light/dark setting), **Light** or **Dark**.
 
 ## Notes

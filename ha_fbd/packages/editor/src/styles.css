@@ -25,8 +25,8 @@ input.invalid, textarea.invalid { border-color: var(--bad); }
 .app { display: grid; grid-template-rows: auto 1fr; height: 100%; }
 .top { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--bd);
   padding-top: calc(8px + env(safe-area-inset-top, 0px)); }
-.logo { flex: none; display: block; }
 .brand { font-size: 15px; margin-right: 6px; }
+.logo { flex: none; display: block; }
 .pill { padding: 1px 9px; border-radius: 99px; border: 1px solid var(--bd); font-size: 12px; }
 .pill.ok { color: var(--ok); border-color: var(--ok); } .pill.bad { color: var(--bad); border-color: var(--bad); }
 .toast { position: fixed; top: 52px; left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 16px; border-radius: 8px; z-index: 10; box-shadow: 0 4px 16px #0004; }
@@ -120,6 +120,7 @@ input.invalid, textarea.invalid { border-color: var(--bad); }
 .card { background: var(--panel); border: 1px solid var(--bd); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
 .card label { display: block; font-weight: 600; } .card label input { margin-top: 5px; font-weight: 400; }
 .card .row { display: flex; gap: 8px; margin-top: 10px; }
+.card textarea.export-text { display: block; margin-top: 5px; height: 140px; resize: vertical; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; font-weight: 400; white-space: pre; }
 .empty-card { text-align: center; padding: 30px; } .empty-card h2 { margin: 0 0 6px; }
 .auto-table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--bd); border-radius: 10px; overflow: hidden; }
 .auto-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--mut); padding: 8px 12px; background: var(--chip); }
