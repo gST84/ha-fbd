@@ -40,6 +40,8 @@
 | `POST /automations/:id/validate | deploy | start | stop | duplicate` | lifecycle |
 | `GET /automations/:id/status | log` | status, log |
 | `GET /automations/:id/watch` | Server-Sent Events with live values |
+| `GET /export`, `GET /export?id=:id` | download all / one automation as an export file (`{ format: "ha-fbd-export", version: 1, automations: Program[] }`) |
+| `POST /import` | export file or a single program → new, stopped automations |
 | `GET /status`, `GET /entities`, `GET /areas`, `GET /blocks` | data for the editor |
 
 ## packages/editor

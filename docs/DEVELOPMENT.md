@@ -1,8 +1,9 @@
 # Development
 
-Node.js 22+ and npm. The repo is an npm workspace.
+Node.js 22+ and npm. The add-on folder `ha_fbd/` is an npm workspace and doubles as the Docker build context (a Home Assistant add-on repository needs the sources inside the add-on folder). Run all commands below from `ha_fbd/`.
 
 ```
+cd ha_fbd
 npm install
 npm test                 # builds the engine, then engine + server + editor unit tests
 npm run build            # engine → editor bundle (into packages/server/public) → server
@@ -39,8 +40,8 @@ The browser tests need `playwright` with a Chromium install (`npx playwright ins
 ## Regenerating docs and screenshots
 
 ```
-npx tsx scripts/gen-block-docs.ts        # docs/BLOCKS.md from the engine's block documentation
-SHOTS=./shots npx tsx packages/editor/test/e2e-features2.ts   # fresh screenshots, copy the ones you need to docs/screenshots
+npx tsx scripts/gen-block-docs.ts        # ../docs/BLOCKS.md from the engine's block documentation
+SHOTS=./shots npx tsx packages/editor/test/e2e-features2.ts   # fresh screenshots, copy the ones you need to ../docs/screenshots
 ```
 
 ## Adding a block
@@ -57,6 +58,10 @@ To retire a block without breaking saved programs, set `hidden: true` (it still 
 ## Packaging
 
 ```
-npm run package:addon    # → dist-addon/ha_fbd  (copy to the "addons" share)
+npm run package:addon    # → ../dist-addon/ha_fbd  (copy to the "addons" share to test as a local add-on)
 ```
-The editor bundle is built inside the Docker image, so only sources are staged. Bump `version` in `addon/ha_fbd/config.yaml` and add an entry to `CHANGELOG.md` for every release.
+The editor bundle is built inside the Docker image, so only sources are staged.
+
+## Releasing
+
+Bump `version` in `ha_fbd/config.yaml`, add an entry to `ha_fbd/CHANGELOG.md` and push to `main`. Home Assistant installations that added the repository see the new version on their next store refresh and rebuild the image from `ha_fbd/`.

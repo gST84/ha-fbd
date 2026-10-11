@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2
+- **Export / import** on the automations page: download one or all automations as a `.fbd.json` file and import them again (also on another installation). Imported automations are added as new, stopped automations.
+- The GitHub repository is now a Home Assistant add-on repository: add `https://github.com/gST84/ha-fbd` to the add-on store to install and update, no more copying folders.
+
 ## 0.5.1
 - The add-on icon is shown at the top left of the toolbar (automations page and editor).
 

@@ -1,0 +1,9 @@
+# Keep the image build context to what the Dockerfile needs.
+node_modules
+**/node_modules
+**/dist
+**/test
+packages/server/public
+scripts
+data
+shots

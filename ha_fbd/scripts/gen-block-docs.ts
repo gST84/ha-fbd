@@ -23,5 +23,5 @@ for (const c of cats) {
     if (b.doc?.notes?.length) md += b.doc.notes.map(n => `- ${n}`).join('\n') + '\n\n';
   }
 }
-writeFileSync(new URL('../docs/BLOCKS.md', import.meta.url), md.trimEnd() + '\n');
+writeFileSync(new URL('../../docs/BLOCKS.md', import.meta.url), md.trimEnd() + '\n');
 console.log(`docs/BLOCKS.md: ${blocks.length} blocks`);

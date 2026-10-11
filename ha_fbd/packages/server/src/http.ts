@@ -18,6 +18,23 @@ export function isAllowedAddress(addr: string | undefined): boolean {
   return a === '172.30.32.2' || a === '127.0.0.1' || a === '::1';
 }
 
+/** Export file: every automation's program in one JSON document (running state and retained variables are not included). */
+export const EXPORT_FORMAT = 'ha-fbd-export';
+export interface ExportFile { format: typeof EXPORT_FORMAT; version: 1; exported: string; automations: Program[] }
+
+/** Accepts an export file or a single bare program; returns the programs or a message saying what is wrong. */
+export function readImport(body: unknown): Program[] | string {
+  const o = body as Partial<ExportFile> | null;
+  const list = o && typeof o === 'object' && o.format === EXPORT_FORMAT ? o.automations : [body];
+  if (!Array.isArray(list) || list.length === 0) return 'The file contains no automations';
+  if (list.length > 200) return 'Too many automations in one file';
+  for (const [i, p] of list.entries()) {
+    const shape = checkShape(p);
+    if (shape) return list.length > 1 ? `Automation ${i + 1}: ${shape}` : shape;
+  }
+  return list as Program[];
+}
+
 export interface ServerOptions { manager: AutomationManager; publicDir: string; ingressOnly?: boolean }
 
 export function createHttpServer({ manager, publicDir, ingressOnly = false }: ServerOptions): http.Server {
@@ -76,6 +93,29 @@ export function createHttpServer({ manager, publicDir, ingressOnly = false }: Se
         return send(res, 200, manager.ha.listEntities().map(e => ({
           entity_id: e.entity_id, state: e.state, name: (e.attributes.friendly_name as string | undefined) ?? e.entity_id,
         })));
+      }
+
+      // ───────── export / import ─────────
+      if (route === 'GET /api/export') {
+        const id = url.searchParams.get('id');
+        if (id !== null && !ID_RE.test(id)) throw fail(400, 'Invalid automation id');
+        const hosts = id === null ? manager.list().map(a => manager.get(a.id)) : [manager.get(id)];
+        if (id !== null && !hosts[0]) throw fail(404, 'No such automation');
+        const file: ExportFile = { format: EXPORT_FORMAT, version: 1, exported: new Date().toISOString(),
+          automations: hosts.flatMap(h => (h?.program ? [h.program] : [])) };
+        const name = id ?? `fbd-automations-${file.exported.slice(0, 10)}`;
+        res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store', 'content-disposition': `attachment; filename="${name}.fbd.json"` });
+        return res.end(JSON.stringify(file, null, 2));
+      }
+      if (route === 'POST /api/import') {
+        const programs = readImport(await readBody(req));
+        if (typeof programs === 'string') return send(res, 400, { error: programs });
+        const imported: { id: string; name: string }[] = [];
+        for (const p of programs) {                                   // always new automations, stopped; nothing is overwritten
+          const host = await manager.create(typeof p.name === 'string' ? p.name : 'Imported automation', p);
+          imported.push({ id: host.id, name: host.name });
+        }
+        return send(res, 201, { imported });
       }
 
       // ───────── automations ─────────

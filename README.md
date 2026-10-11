@@ -22,8 +22,8 @@ Program your Home Assistant automations as **IEC 61131-3 function block diagrams
 
 ## Quick start
 
-1. Copy `dist-addon/ha_fbd` (see [installation](docs/INSTALL.md)) to the Samba share **addons** of your Home Assistant.
-2. *Settings → Add-ons → Add-on Store → ⋮ → Check for updates*, then install **FBD Automation** under *Local add-ons*.
+1. In Home Assistant: *Settings → Add-ons → Add-on Store → ⋮ → Repositories* and add `https://github.com/gST84/ha-fbd`.
+2. Install **FBD Automation** from the store (see [installation](docs/INSTALL.md)).
 3. Start it and enable *Show in sidebar*.
 4. Click **+ New automation**, build a program, press **Deploy**.
 
@@ -33,27 +33,28 @@ Full walkthrough: [docs/INSTALL.md](docs/INSTALL.md) · [docs/USER-GUIDE.md](doc
 
 | Document | Content |
 |---|---|
-| [INSTALL.md](docs/INSTALL.md) | Install as local add-on (Samba/SSH), options, updating, troubleshooting |
+| [INSTALL.md](docs/INSTALL.md) | Install from the add-on repository, options, updating, troubleshooting |
 | [USER-GUIDE.md](docs/USER-GUIDE.md) | The editor, building programs, examples, live view |
 | [BLOCKS.md](docs/BLOCKS.md) | Reference of every block, pin and parameter (generated) |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Engine, scan cycle, server, editor, file formats, REST API |
 | [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Develop and test on your PC, browser tests, adding a block |
-| [CHANGELOG.md](CHANGELOG.md) | Version history |
+| [CHANGELOG.md](ha_fbd/CHANGELOG.md) | Version history |
 
 ## Repository layout
 
 ```
-packages/engine   pure TypeScript FBD engine (blocks, compiler, scan cycle) – no HA dependency
-packages/server   HA websocket client, program host, REST + SSE API
-packages/editor   React + SVG editor (esbuild bundle served by the server)
-addon/ha_fbd      Home Assistant add-on definition (config.yaml, Dockerfile, docs, icon)
-scripts           package-addon.mjs, gen-block-docs.ts
-docs              documentation and screenshots
+repository.yaml          marks this repo as a Home Assistant add-on repository
+ha_fbd                   the add-on: config.yaml, Dockerfile, DOCS.md, CHANGELOG.md, icon + all sources
+ha_fbd/packages/engine   pure TypeScript FBD engine (blocks, compiler, scan cycle) – no HA dependency
+ha_fbd/packages/server   HA websocket client, program host, REST + SSE API
+ha_fbd/packages/editor   React + SVG editor (esbuild bundle served by the server)
+ha_fbd/scripts           package-addon.mjs, gen-block-docs.ts
+docs                     documentation and screenshots
 ```
 
 ## Status
 
-Tested on a real Home Assistant OS installation as a local add-on. The unit tests and browser end-to-end tests run against a fake Home Assistant. Issues and feedback are welcome.
+Tested on a real Home Assistant OS installation. The unit tests and browser end-to-end tests run against a fake Home Assistant. Issues and feedback are welcome.
 
 ## License
 

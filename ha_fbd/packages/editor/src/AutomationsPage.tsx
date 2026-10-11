@@ -11,6 +11,7 @@ export function AutomationsPage({ onOpen }: { onOpen(id: string): void }) {
   const [name, setName] = useState('');
   const [toast, setToast] = useState('');
   const nameRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -32,6 +33,17 @@ export function AutomationsPage({ onOpen }: { onOpen(id: string): void }) {
     refresh();
   };
   const duplicate = async (a: AutomationSummary) => { await send('POST', `automations/${a.id}/duplicate`); refresh(); };
+  // The server answers with "content-disposition: attachment", so following the link saves the file.
+  const download = (query = '') => { const a = document.createElement('a'); a.href = 'api/export' + query; a.download = ''; a.click(); };
+  const importFile = async (file: File | undefined) => {
+    if (!file) return;
+    let body: unknown;
+    try { body = JSON.parse(await file.text()); } catch { say(`"${file.name}" is not a JSON file`); return; }
+    const r = await send<{ imported?: { id: string; name: string }[]; error?: string }>('POST', 'import', body);
+    const n = r.body?.imported?.length;
+    say(n ? `Imported ${n} automation${n === 1 ? '' : 's'} (stopped – start them when you are ready)` : `Import failed: ${r.body?.error ?? 'unknown error'}`);
+    refresh();
+  };
   const remove = async (a: AutomationSummary) => {
     if (!confirm(`Delete the automation "${a.name}"? Its program and stored variables are removed.`)) return;
     await fetch(`api/automations/${a.id}`, { method: 'DELETE' });
@@ -47,6 +59,10 @@ export function AutomationsPage({ onOpen }: { onOpen(id: string): void }) {
         {global && <span className="muted small">{global.automations.running} of {global.automations.total} running · {global.entities} entities</span>}
         <span className="grow" />
         <ThemeSelect />
+        <input ref={fileRef} type="file" accept=".json,application/json" hidden data-testid="import-file"
+          onChange={e => { importFile(e.target.files?.[0]); e.target.value = ''; }} />
+        <button className="sec" data-testid="import" title="Add the automations from an export file" onClick={() => fileRef.current?.click()}>Import</button>
+        <button className="sec" data-testid="export-all" title="Download all automations as one file" disabled={!list?.length} onClick={() => download()}>Export all</button>
         <button data-testid="new-automation" onClick={() => setCreating(true)}>+ New automation</button>
       </header>
       {toast && <div className="toast" data-testid="toast">{toast}</div>}
@@ -89,6 +105,7 @@ export function AutomationsPage({ onOpen }: { onOpen(id: string): void }) {
                   <td className="actions">
                     <button className="sec" data-testid="open" onClick={() => onOpen(a.id)}>Edit</button>
                     <button className="sec" data-testid="toggle" onClick={() => toggle(a)}>{a.running ? 'Stop' : 'Start'}</button>
+                    <button className="icon" title="Export" data-testid="export-auto" onClick={() => download(`?id=${a.id}`)}>⭳</button>
                     <button className="icon" title="Duplicate" onClick={() => duplicate(a)}>⧉</button>
                     <button className="icon" title="Delete" data-testid="delete-auto" onClick={() => remove(a)}>✕</button>
                   </td>

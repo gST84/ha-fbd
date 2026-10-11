@@ -423,6 +423,24 @@ test('HTTP API: automations CRUD, validate / deploy / start / stop, SSE watch, s
   assert.equal((await post(`/api/automations/${id}/start`)).body.ok, true);
   const dup = await post(`/api/automations/${id}/duplicate`); assert.equal(dup.status, 201);
   assert.equal((await j('/api/automations')).body.length, 2);
+  // export → import round trip: imports become new, stopped automations
+  const one = await fetch(`${base}/api/export?id=${id}`);
+  assert.match(one.headers.get('content-disposition') ?? '', /attachment; filename="test-one\.fbd\.json"/);
+  const oneFile = await one.json() as any;
+  assert.equal(oneFile.format, 'ha-fbd-export'); assert.equal(oneFile.automations.length, 1);
+  assert.deepEqual(oneFile.automations[0], (await j(`/api/automations/${id}`)).body);
+  const all = (await j('/api/export')).body; assert.equal(all.automations.length, 2);
+  const imp = await post('/api/import', all); assert.equal(imp.status, 201);
+  assert.deepEqual(imp.body.imported.map((a: any) => a.id), ['test-one-2', 'test-one-copy-2']);
+  assert.equal((await j('/api/automations')).body.length, 4);
+  assert.equal((await j('/api/automations/test-one-2/status')).body.running, false);
+  assert.deepEqual((await j('/api/automations/test-one-2')).body, oneFile.automations[0]);
+  assert.equal((await post('/api/import', oneFile.automations[0])).body.imported[0].id, 'test-one-3', 'a bare program is accepted too');
+  assert.equal((await post('/api/import', { format: 'ha-fbd-export', automations: [oneFile.automations[0], { nonsense: true }] })).status, 400);
+  assert.equal((await post('/api/import', { format: 'ha-fbd-export', automations: [] })).status, 400);
+  assert.equal((await j('/api/automations')).body.length, 5, 'a file with an invalid automation imports nothing');
+  assert.equal((await j('/api/export?id=nope')).status, 404);
+
   assert.equal((await j('/api/automations/nope')).status, 404);
   assert.equal((await j('/api/automations/..%2fx')).status, 400);
   assert.equal((await j(`/api/automations/${id}`, { method: 'DELETE' })).body.ok, true);

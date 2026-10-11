@@ -1,0 +1,7 @@
+node_modules/
+dist/
+dist-addon/
+data/
+shots/
+ha_fbd/packages/server/public/assets/
+.DS_Store

@@ -19,6 +19,8 @@ Wires never form a loop inside one scan – use a **variable** for feedback (wri
 
 Create a new automation, start or stop it, duplicate it or delete it. The header shows whether Home Assistant is connected.
 
+**Export / import.** *Export all* downloads every automation as one `.fbd.json` file; the ⭳ button on a row exports just that automation. *Import* adds the automations from such a file as **new, stopped** automations – nothing is overwritten, so importing the same file twice gives you copies. The file holds the programs only: whether an automation was running and the current values of its variables are not included. Use it as a backup or to move automations to another installation.
+
 ## The editor
 
 ![Editor](screenshots/editor-live.png)
