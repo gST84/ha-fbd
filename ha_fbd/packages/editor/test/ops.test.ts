@@ -5,7 +5,7 @@ import {
   addBlock, addNetwork, addVariable, addWire, deleteBlock, deleteNetwork, deleteVariable, deleteWire,
   emptyProgram, migrateLegacy, moveBlock, moveNetwork, setParams, updateVariable,
 } from '../src/ops';
-import { findFreeSpot, layout, wirePath } from '../src/geometry';
+import { findFreeSpot, layout, setPlaceNames, wirePath } from '../src/geometry';
 
 const NET = 'net_1';
 
@@ -219,6 +219,12 @@ test('time-of-day and room blocks: sensible defaults that compile once the room 
   const ok = setParams(room, NET, r.id, { areaId: 'living_room' });
   assert.equal(compileProgram(ok).errors.length, 0);
   assert.equal(layout(ok.networks[0].blocks[0]).subtitle, 'living room');
+  const v = setPlaceNames([{ id: 'living_room', name: 'Woonkamer' }], [{ id: 'd6b50c27', name: 'Raam' }]);
+  assert.equal(layout(ok.networks[0].blocks[0]).subtitle, 'Woonkamer', 'rooms show their Home Assistant name');
+  const zone = setParams(ok, NET, r.id, { areaId: undefined, floorId: 'd6b50c27' });
+  assert.equal(layout(zone.networks[0].blocks[0]).subtitle, 'zone Raam', 'zones show their name, not the id');
+  assert.equal(setPlaceNames([{ id: 'living_room', name: 'Woonkamer' }], [{ id: 'd6b50c27', name: 'Raam' }]), v, 'unchanged names keep the version');
+  setPlaceNames([], []);
   assert.equal(registry.TIME_OF_DAY.category, 'Timers');
   assert.equal(layout(t.program.networks[0].blocks[0]).subtitle, '22:00 – 06:00');
   const days = setParams(t.program, NET, t.id, { days: [1, 5] });

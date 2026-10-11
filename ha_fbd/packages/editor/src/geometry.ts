@@ -13,6 +13,21 @@ const TITLES: Record<string, string> = {
 
 export const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+// Names of Home Assistant rooms (areas) and zones (floors), so blocks can show "Living room" instead of the id.
+let placeNames = { areas: new Map<string, string>(), floors: new Map<string, string>() };
+let placeKey = '', placeVersion = 0;
+type Named = { id: string; name: string };
+/** Returns a version number that only changes when a name changed (layouts depend on it). */
+export function setPlaceNames(areas: Named[], floors: Named[]): number {
+  const key = JSON.stringify([areas.map(a => [a.id, a.name]), floors.map(f => [f.id, f.name])]);
+  if (key !== placeKey) {
+    placeKey = key; placeVersion++;
+    placeNames = { areas: new Map(areas.map(a => [a.id, a.name])), floors: new Map(floors.map(f => [f.id, f.name])) };
+  }
+  return placeVersion;
+}
+const placeName = (kind: 'areas' | 'floors', id: unknown) => placeNames[kind].get(String(id)) || String(id).replace(/_/g, ' ');
+
 export function subtitleOf(b: BlockInst): string {
   const p = b.params ?? {};
   switch (b.type) {
@@ -23,14 +38,14 @@ export function subtitleOf(b: BlockInst): string {
       return p.entityId ? String(p.entityId) : '⚠ pick entity';
     case 'SET':
     case 'RESET':
-      if (p.target === 'room') return p.floorId ? `zone ${String(p.floorId).replace(/_/g, ' ')}` : p.areaId ? String(p.areaId).replace(/_/g, ' ') : '⚠ pick room or zone';
+      if (p.target === 'room') return p.floorId ? `zone ${placeName('floors', p.floorId)}` : p.areaId ? placeName('areas', p.areaId) : '⚠ pick room or zone';
       return p.target === 'entity' ? (p.entityId ? String(p.entityId) : '⚠ pick entity') : (p.name ? `$${String(p.name)}` : '⚠ pick variable');
     case 'TIME_OF_DAY': {
       const a = String(p.start ?? '00:00'), z = String(p.end ?? '00:00');
       const days = Array.isArray(p.days) && p.days.length && p.days.length < 7 ? ' · ' + (p.days as number[]).slice().sort().map(d => DAY_NAMES[d - 1]).join(' ') : '';
       return (a === z ? 'all day' : `${a} – ${z}`) + days;
     }
-    case 'AREA_OUT': return p.areaId ? `${String(p.areaId).replace(/_/g, ' ')} · ${p.action === 'turn_on' ? 'on' : 'off'}` : '⚠ pick room';
+    case 'AREA_OUT': return p.areaId ? `${placeName('areas', p.areaId)} · ${p.action === 'turn_on' ? 'on' : 'off'}` : '⚠ pick room';
     case 'EVENT_IN':
     case 'EVENT_OUT': return p.eventType ? String(p.eventType) : '⚠ event type';
     case 'VAR_READ':

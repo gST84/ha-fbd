@@ -3,7 +3,7 @@ import type { PointerEvent as RPE } from 'react';
 import type { Program, Value } from '@ha-fbd/engine';
 import { get, send } from './api';
 import { ContextMenu, type MenuItem } from './ContextMenu';
-import { GRID, snap, snapX } from './geometry';
+import { GRID, setPlaceNames, snap, snapX } from './geometry';
 import { useHistory } from './history';
 import { NetworkView } from './NetworkView';
 import {
@@ -42,6 +42,7 @@ export default function App({ id, onBack }: { id: string; onBack(): void }) {
   const [status, setStatus] = useState<AutomationStatus | null>(null);
   const [entities, setEntities] = useState<EntityInfo[]>([]);
   const [areas, setAreas] = useState<{ list: AreaInfo[]; floors: FloorInfo[]; error?: string }>({ list: [], floors: [] });
+  const [places, setPlaces] = useState(0);                     // bumps when room / zone names arrive, so block subtitles are redrawn
   const [ctx, setCtx] = useState<ContextInfo | null>(null);
   const [problems, setProblems] = useState<Problem[]>([]);
   const [saveState, setSaveState] = useState<SaveState>('saved');
@@ -81,7 +82,7 @@ export default function App({ id, onBack }: { id: string; onBack(): void }) {
     return () => clearInterval(t);
   }, []);
   useEffect(() => {
-    const load = () => get<{ areas: AreaInfo[]; floors?: FloorInfo[]; error?: string }>('areas').then(r => setAreas({ list: r.body?.areas ?? [], floors: r.body?.floors ?? [], error: r.body?.error })).catch(() => {});
+    const load = () => get<{ areas: AreaInfo[]; floors?: FloorInfo[]; error?: string }>('areas').then(r => { const list = r.body?.areas ?? [], floors = r.body?.floors ?? []; setPlaces(setPlaceNames(list, floors)); setAreas({ list, floors, error: r.body?.error }); }).catch(() => {});
     load(); const t = setInterval(load, 60000);
     return () => clearInterval(t);
   }, []);
@@ -264,7 +265,7 @@ export default function App({ id, onBack }: { id: string; onBack(): void }) {
 
         <main className="center">
           {program.networks.map((net, i) => (
-            <NetworkView key={net.id} net={net} index={i} total={program.networks.length} active={net.id === activeNet}
+            <NetworkView key={net.id} net={net} places={places} index={i} total={program.networks.length} active={net.id === activeNet}
               selection={sel} errorBlocks={errorBlocks} values={values} edit={edit} beginTx={beginTx}
               onActivate={() => setActiveNet(net.id)} onSelect={setSel} onContext={openContext}
               onDropBlock={(netId, type, x, y) => addTo(netId, type, x, y)}

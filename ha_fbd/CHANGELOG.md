@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.3
+- SET / RESET blocks that switch a room or zone show its Home Assistant **name** on the block instead of the internal id.
+
 ## 0.7.2
 - **Export / import** on the automations page: export one or all automations as a `.fbd.json` file and import them again (also on another installation). The export is also shown as text to copy and import accepts pasted text, because the Home Assistant apps ignore file downloads from an add-on panel. Imported automations are added as new, stopped automations.
 - The GitHub repository is now a Home Assistant add-on repository: add `https://github.com/gST84/ha-fbd` to the add-on store to install and update, no more copying folders.

@@ -18,6 +18,8 @@ export interface NetworkProps {
   selection: Selection | null; errorBlocks: Set<string>;
   /** live values "block.PIN" → value, or null when the program is not running */
   values: Record<string, Value> | null;
+  /** Version of the room / zone names (see setPlaceNames); block subtitles show those names. */
+  places: number;
   edit: Edit; beginTx(): void;
   onActivate(): void; onSelect(s: Selection | null): void;
   onDropBlock(netId: string, type: string, x: number, y: number): void;
@@ -55,7 +57,7 @@ function NetworkViewImpl(props: NetworkProps) {
   const [band, setBand] = useState<Band | null>(null);
   const [menu, setMenu] = useState<string | null>(null);      // block id whose type menu is open
 
-  const L = useMemo(() => new Map(net.blocks.map(b => [b.id, layout(b)])), [net.blocks]);
+  const L = useMemo(() => new Map(net.blocks.map(b => [b.id, layout(b)])), [net.blocks, props.places]);
   const byId = useMemo(() => new Map(net.blocks.map(b => [b.id, b])), [net.blocks]);
   const wiredOuts = useMemo(() => new Set(net.wires.map(w => `${w.from.block}.${w.from.pin}`)), [net.wires]);
   const driver = useMemo(() => new Map(net.wires.map(w => [`${w.to.block}.${w.to.pin}`, `${w.from.block}.${w.from.pin}`])), [net.wires]);
