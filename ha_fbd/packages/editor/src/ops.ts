@@ -41,7 +41,8 @@ export function defaultParams(type: string, p: Program): Record<string, unknown>
     case 'VAR_READ':
     case 'VAR_WRITE': { const v = p.variables[0]; return { name: v?.name ?? '', varType: v?.type ?? 'BOOL' }; }
     case 'SET':
-    case 'RESET': return { target: 'variable', name: p.variables.find(v => v.type === 'BOOL')?.name ?? '', varType: 'BOOL' };
+    case 'RESET':
+    case 'TOGGLE': return { target: 'variable', name: p.variables.find(v => v.type === 'BOOL')?.name ?? '', varType: 'BOOL' };
     case 'EVENT_IN': return { eventType: '' };
     case 'EVENT_OUT': return { eventType: '' };
     case 'TIME_OF_DAY': return { start: '22:00', end: '06:00' };

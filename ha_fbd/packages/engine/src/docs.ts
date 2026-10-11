@@ -162,6 +162,12 @@ export const BLOCK_DOCS: Record<string, BlockDoc> = {
     inputs: { IN: 'Condition' }, example: 'Doorbell pressed → SET "visitor"; "visitor seen" → RESET "visitor".',
     notes: ['Room target: choose which kinds of devices are affected – "switch" may also include sockets of e.g. a fridge. The area must exist in Home Assistant (Settings → Areas). Zones are Home Assistant floors (Settings → Areas → Floors); pick a zone to affect all rooms on it.', 'If SET and RESET on the same variable are both TRUE, the block that comes later in the program wins.'],
   },
+  TOGGLE: {
+    summary: 'Flip a BOOL variable (or an entity / a whole room) between ON and OFF on every rising edge of IN.',
+    details: 'Each time IN goes from FALSE to TRUE the target changes to the other state; holding IN TRUE does nothing more. With a variable target the variable is inverted. With an entity target the entity is switched off when it is on and on when it is off (covers open / close, locks lock / unlock). With a room or zone target everything is switched OFF when at least one of the selected kinds of devices is on, otherwise everything is switched ON – so one push button works like a master switch.',
+    inputs: { IN: 'Trigger: the state flips on the rising edge' }, example: 'One wall button (EVENT_IN or a binary sensor) → TOGGLE the hallway light.',
+    notes: ['An entity or room is toggled from its current state in Home Assistant, so it also follows changes made elsewhere (app, wall switch).', 'An unavailable or unknown entity counts as off.', 'Room target: needs the list of rooms from Home Assistant; when it cannot be loaded the output fails with a warning in the log.'],
+  },
   RESET: {
     summary: 'Reset a BOOL variable (or switch an entity / a whole room OFF) while IN is TRUE.', details: 'Counterpart of SET. With a variable target it forces the variable FALSE while IN is TRUE. With an entity target it turns the entity off at the rising edge of IN. With a room target every selected kind of device in the chosen Home Assistant area – or in a whole zone (floor, all its rooms) – is switched off at the rising edge of IN.',
     inputs: { IN: 'Condition' }, example: 'Good-night button → RESET room "living room": lights + media players off. Leaving home → RESET zone "Ground floor": all lights off.',

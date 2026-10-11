@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-/** Small glyphs (16 × 16 grid) for what a SET / RESET block switches. */
+/** Small glyphs (16 × 16 grid) for what a SET / RESET / TOGGLE block switches. */
 const GLYPHS: Record<string, { label: string; shape: ReactNode }> = {
   light: { label: 'Lights', shape: <path d="M8 1.5a4.6 4.6 0 0 0-2.6 8.4v1.6h5.2V9.9A4.6 4.6 0 0 0 8 1.5zM5.9 12.6h4.2v1.9H5.9z" /> },
   media_player: { label: 'Media players', shape: <path d="M5.6 3.2 13.4 1.5v9.3a2.3 2.3 0 1 1-1.4-2.1V4.7L7 5.8v6.6a2.3 2.3 0 1 1-1.4-2.1z" /> },

@@ -10,7 +10,7 @@ Program your Home Assistant automations as **IEC 61131-3 function block diagrams
 
 - **TIA-Portal-style editor** inside Home Assistant (Ingress / sidebar): stacked networks, drag-to-wire, type-checked pins, undo/redo, copy / cut / paste, multi-select, right-click menu, resizable panels, light / dark theme (follows Home Assistant).
 - **Live view:** while an automation runs, active wires and blocks turn green and the current value is printed on every wire.
-- **47 blocks:** logic (AND/OR/XOR/NOT), comparisons, math, selection, MOVE, conversion, timers (TON/TOF/TP, time of day), edge detection, flip-flops, counters, a **PID controller** – see the [block reference](docs/BLOCKS.md).
+- **48 blocks:** logic (AND/OR/XOR/NOT), comparisons, math, selection, MOVE, conversion, timers (TON/TOF/TP, time of day), edge detection, flip-flops, counters, a **PID controller** – see the [block reference](docs/BLOCKS.md).
 - **Home Assistant I/O:** read entity states or attributes, switch entities, set values or attributes, call services, send and receive events, switch a whole **room** (area) or **zone** (floor) on or off.
 - **Internal variables** shared between networks and carried over between scans (feedback, state machines).
 - **Several automations**, each with its own program, variables and scan loop; start / stop / duplicate individually.

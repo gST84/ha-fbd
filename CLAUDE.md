@@ -18,10 +18,10 @@ Run from `ha_fbd/`.
 - Use `tsx --test --test-force-exit` for node tests (hangs otherwise).
 
 ## Decisions and conventions
-- Room (area) switching is a *target* of SET / RESET (`target: "room"`, `areaId` *or* `floorId` (zone = HA floor, wins over areaId), `domains`); SET = turn_on, RESET = turn_off, on a rising edge. The old `AREA_OUT` block is `hidden: true` (still runs) and `migrateLegacy` in `ops.ts` converts it on load.
+- Room (area) switching is a *target* of SET / RESET (`target: "room"`, `areaId` *or* `floorId` (zone = HA floor, wins over areaId), `domains`); SET = turn_on, RESET = turn_off, TOGGLE = the other state (room: the server checks whether anything is on, `isOnState`), on a rising edge. The old `AREA_OUT` block is `hidden: true` (still runs) and `migrateLegacy` in `ops.ts` converts it on load.
 - `TIME_OF_DAY` lives in the Timers category. It uses HA's time zone (`ctx.clock()`).
 - Editor numeric inputs are lazy drafts parsed with `parseNumber` (accepts `1,5` and `1.5`).
 - The add-on UI is Ingress-only (`INGRESS_ONLY=1`).
-- Version: `ha_fbd/config.yaml` + `ha_fbd/CHANGELOG.md` – bump both for every release (currently 0.7.5). Pushing the bump to `main` is the release: installed add-ons pick it up from the repository.
+- Version: `ha_fbd/config.yaml` + `ha_fbd/CHANGELOG.md` – bump both for every release (currently 0.7.6). Pushing the bump to `main` is the release: installed add-ons pick it up from the repository.
 - No other file named `config.yaml` / `config.json` may exist anywhere in the repo – the Supervisor treats each one as an add-on.
 - Export / import (`GET /api/export`, `POST /api/import`, file format `ha-fbd-export`): programs only; imports always become new, stopped automations.

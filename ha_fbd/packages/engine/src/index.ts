@@ -5,7 +5,7 @@ export { Runtime, CompileFailed, type RuntimeOptions, type ScanResult } from './
 export { CyclicScheduler } from './scheduler.js';
 export { accepts, coerce, toTimeMs } from './helpers.js';
 export { parseNumber, toBool, toNum } from './helpers.js';
-export { ATTRIBUTES, attributesOf, attributeDef, domainOf, type AttributeDef } from './attributes.js';
+export { ATTRIBUTES, attributesOf, attributeDef, domainOf, isOnState, type AttributeDef } from './attributes.js';
 export { BLOCK_FAMILIES, familyOf } from './families.js';
 export { BLOCK_DOCS, pinDoc, type BlockDoc } from './docs.js';
 export { matchesEvent, getPath } from './blocks/io.js';

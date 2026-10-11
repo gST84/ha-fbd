@@ -56,5 +56,16 @@ export const ATTRIBUTES: Record<string, Record<string, AttributeDef>> = {
 };
 
 export const domainOf = (entityId: unknown): string => String(entityId ?? '').split('.')[0];
+/** Whether an entity counts as "on" (TOGGLE needs it): matches what switching it on / off does per domain. */
+export function isOnState(entityId: unknown, state: unknown): boolean {
+  const s = String(state ?? '').trim().toLowerCase();
+  switch (domainOf(entityId)) {
+    case 'cover':
+    case 'valve': return s === 'open' || s === 'opening';
+    case 'lock': return s === 'locked' || s === 'locking';
+    case 'vacuum': return s === 'cleaning';
+    default: return !['', 'off', 'standby', 'unavailable', 'unknown'].includes(s);
+  }
+}
 export const attributesOf = (domain: string): string[] => Object.keys(ATTRIBUTES[domain] ?? {});
 export const attributeDef = (domain: string, attribute: string): AttributeDef | undefined => ATTRIBUTES[domain]?.[attribute];

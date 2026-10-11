@@ -67,6 +67,9 @@ test('SET / RESET with target room: on/off the whole area on a rising edge', () 
   assert.deepEqual(reset.scan().commands, [{ kind: 'area', blockId: 'r', areaId: 'living_room', domains: ['light', 'media_player'], action: 'turn_off' }]);
   assert.deepEqual(set.scan().commands, [{ kind: 'area', blockId: 'r', areaId: 'living_room', domains: ['light', 'media_player'], action: 'turn_on' }]);
   assert.deepEqual(reset.scan().commands, [], 'held TRUE does not repeat');
+  const toggle = mk('TOGGLE'); state.on = false; toggle.scan(); state.on = true;
+  assert.deepEqual(toggle.scan().commands, [{ kind: 'area', blockId: 'r', areaId: 'living_room', domains: ['light', 'media_player'], action: 'toggle' }]);
+  assert.deepEqual(toggle.scan().commands, [], 'TOGGLE only acts on the rising edge');
   const err = (type: string, p: Record<string, unknown>) => compileProgram(prog([B('r', type, { target: 'room', ...p })])).errors.map(e => e.message).join();
   assert.match(err('SET', {}), /pick the room/); assert.match(err('RESET', { areaId: 'a', domains: [] }), /at least one/);
   assert.equal(err('RESET', { areaId: 'kitchen' }), '');

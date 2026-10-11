@@ -88,6 +88,28 @@ test('MOVE copies while EN is TRUE and holds the last value otherwise', () => {
   assert.equal(v['mv.OUT'], 9, 'holds the last copied value'); assert.equal(v['mv.ENO'], false);
 });
 
+test('TOGGLE flips a variable or an entity once per rising edge', () => {
+  const { io, rt } = setup(
+    [inBool('btn', 'input_boolean.btn'), B('tv', 'TOGGLE', { target: 'variable', name: 'lamp', varType: 'BOOL' }),
+      B('te', 'TOGGLE', { target: 'entity', entityId: 'light.hall' }), B('tc', 'TOGGLE', { target: 'entity', entityId: 'cover.blind' })],
+    [w('btn.OUT', 'tv.IN'), w('btn.OUT', 'te.IN'), w('btn.OUT', 'tc.IN')],
+    [{ name: 'lamp', type: 'BOOL', initial: false }],
+  );
+  const press = (down: boolean) => { io.set('input_boolean.btn', down ? 'on' : 'off'); return rt.scan(); };
+  io.set('light.hall', 'off'); io.set('cover.blind', 'open');
+  press(false);
+  let r = press(true);
+  assert.equal(rt.getVariable('lamp'), true);
+  assert.deepEqual(r.commands, [{ kind: 'switch', blockId: 'te', entityId: 'light.hall', value: true }, { kind: 'switch', blockId: 'tc', entityId: 'cover.blind', value: false }]);
+  r = press(true);
+  assert.equal(rt.getVariable('lamp'), true, 'held TRUE does not flip again'); assert.deepEqual(r.commands, []);
+  press(false); io.set('light.hall', 'on'); io.set('cover.blind', 'closed');
+  r = press(true);
+  assert.equal(rt.getVariable('lamp'), false);
+  assert.deepEqual(r.commands.map(c => c.kind === 'switch' && c.value), [false, true], 'follows the current state in Home Assistant');
+  assert.match(compileProgram(prog([B('t', 'TOGGLE', { target: 'entity', entityId: 'nope' })], [])).errors[0].message, /entityId/);
+});
+
 // ───────── timers ─────────
 test('TON delays Q and resets when IN drops', () => {
   const { io, rt, advance } = setup([inBool('a', 'input_boolean.a'), B('t', 'TON', { PT: '1s' })], [w('a.OUT', 't.IN')]);

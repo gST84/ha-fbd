@@ -11,6 +11,9 @@ const TITLES: Record<string, string> = {
   EVENT_IN: 'EVENT IN', EVENT_OUT: 'EVENT OUT', TIME_OF_DAY: 'TIME OF DAY', AREA_OUT: 'ROOM OUT',
 };
 
+/** SET / RESET / TOGGLE share their parameters (target variable, entity or room). */
+export const isCoil = (type: string) => type === 'SET' || type === 'RESET' || type === 'TOGGLE';
+
 export const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 // Names of Home Assistant rooms (areas) and zones (floors), so blocks can show "Living room" instead of the id.
@@ -38,6 +41,7 @@ export function subtitleOf(b: BlockInst): string {
       return p.entityId ? String(p.entityId) : '⚠ pick entity';
     case 'SET':
     case 'RESET':
+    case 'TOGGLE':
       if (p.target === 'room') return p.floorId ? `zone ${placeName('floors', p.floorId)}` : p.areaId ? placeName('areas', p.areaId) : '⚠ pick room or zone';
       return p.target === 'entity' ? (p.entityId ? String(p.entityId) : '⚠ pick entity') : (p.name ? `$${String(p.name)}` : '⚠ pick variable');
     case 'TIME_OF_DAY': {
@@ -58,12 +62,12 @@ export function subtitleOf(b: BlockInst): string {
 /** The kinds of devices a block switches (drawn as small icons on the block): the room's domains, or the entity's own domain. */
 export function switchedDomains(b: BlockInst): string[] {
   const p = b.params ?? {};
-  const room = b.type === 'AREA_OUT' || ((b.type === 'SET' || b.type === 'RESET') && p.target === 'room');
+  const room = b.type === 'AREA_OUT' || (isCoil(b.type) && p.target === 'room');
   if (room) {
     const chosen = Array.isArray(p.domains) ? (p.domains as unknown[]).map(String) : ['light', 'media_player'];
     return AREA_DOMAINS.filter(d => chosen.includes(d));
   }
-  if ((b.type === 'SET' || b.type === 'RESET') && p.target === 'entity' && p.entityId) return [domainOf(p.entityId)];
+  if (isCoil(b.type) && p.target === 'entity' && p.entityId) return [domainOf(p.entityId)];
   return [];
 }
 

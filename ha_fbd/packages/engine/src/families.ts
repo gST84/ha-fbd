@@ -8,6 +8,6 @@ export const BLOCK_FAMILIES: string[][] = [
   ['SR', 'RS'],
   ['CTU', 'CTD', 'CTUD'],
   ['TO_BOOL', 'TO_INT', 'TO_REAL', 'TO_STRING'],
-  ['SET', 'RESET'],
+  ['SET', 'RESET', 'TOGGLE'],
 ];
 export const familyOf = (type: string): string[] => BLOCK_FAMILIES.find(f => f.includes(type)) ?? [type];

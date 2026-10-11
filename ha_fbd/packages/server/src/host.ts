@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import {
-  CompileFailed, CyclicScheduler, Runtime, compileProgram,
+  CompileFailed, CyclicScheduler, Runtime, compileProgram, domainOf, isOnState,
   type CompileError, type HAEvent, type IOAdapter, type OutputCommand, type Program, type ScanResult, type Value,
 } from '@ha-fbd/engine';
 import { commandToServiceCall } from './commands.js';
@@ -223,7 +223,8 @@ export class ProgramHost extends EventEmitter {
     try {
       if (cmd.kind === 'event') { await this.opts.ha.fireEvent(cmd.eventType, cmd.data); return; }
       if (cmd.kind === 'area') {      // one call per kind of device; Home Assistant resolves the room (or the whole zone / floor) itself
-        const results = await Promise.allSettled(cmd.domains.map(d => this.opts.ha.callService(d, cmd.action, {}, undefined, cmd.floorId ? { floor_id: cmd.floorId } : { area_id: cmd.areaId })));
+        const action = cmd.action === 'toggle' ? (await this.anyOn(cmd) ? 'turn_off' : 'turn_on') : cmd.action;
+        const results = await Promise.allSettled(cmd.domains.map(d => this.opts.ha.callService(d, action, {}, undefined, cmd.floorId ? { floor_id: cmd.floorId } : { area_id: cmd.areaId })));
         const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
         if (failed) throw failed.reason;
         return;
@@ -234,6 +235,12 @@ export class ProgramHost extends EventEmitter {
     } catch (e) {
       this.note('warning', `Output ${cmd.blockId} failed: ${e instanceof Error ? e.message : String(e)}`);
     }
+  }
+
+  /** TOGGLE on a room / zone: is at least one of the selected kinds of devices on right now? */
+  private async anyOn(cmd: Extract<OutputCommand, { kind: 'area' }>): Promise<boolean> {
+    const areas = (await this.opts.ha.getAreas()).filter(a => (cmd.floorId ? a.floorId === cmd.floorId : a.id === cmd.areaId));
+    return areas.flatMap(a => a.entities).some(e => cmd.domains.includes(domainOf(e)) && isOnState(e, this.opts.ha.getEntity(e)?.state));
   }
 
   private async persist(running = this.running): Promise<void> {

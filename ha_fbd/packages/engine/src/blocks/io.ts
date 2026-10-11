@@ -1,5 +1,5 @@
 import type { BlockDef, DataType, OutputCommand, Value } from '../types.js';
-import { attributeDef, domainOf } from '../attributes.js';
+import { attributeDef, domainOf, isOnState } from '../attributes.js';
 import { areaCheck, areaDomains, areaTarget } from './home.js';
 import { coerce, pin, toBool, toNum, zeroOf } from '../helpers.js';
 
@@ -125,14 +125,21 @@ const VAR_WRITE: BlockDef = {
 };
 
 /**
- * SET / RESET "coils" (like S / R in TIA Portal).
+ * SET / RESET / TOGGLE "coils" (S / R in TIA Portal; TOGGLE flips the state).
  *  target "variable": while IN is TRUE the BOOL variable is forced to TRUE (SET) or FALSE (RESET); it keeps the value afterwards.
- *  target "entity":   on a rising edge of IN the entity is switched on (SET) or off (RESET).
- *  target "room":     on a rising edge of IN every selected kind of device in a Home Assistant area (or a whole zone = floor, param floorId) is switched on (SET) or off (RESET).
+ *                     TOGGLE inverts the variable once per rising edge of IN.
+ *  target "entity":   on a rising edge of IN the entity is switched on (SET), off (RESET) or to the other state (TOGGLE).
+ *  target "room":     on a rising edge of IN every selected kind of device in a Home Assistant area (or a whole zone = floor, param floorId)
+ *                     is switched on (SET) or off (RESET). TOGGLE: all off when anything is on, otherwise all on (the host looks that up).
  */
-const coil = (type: 'SET' | 'RESET'): BlockDef<{ prev: boolean }> => ({
+const COIL_TEXT = {
+  SET: 'Set a BOOL variable / switch an entity or a whole room ON while IN is TRUE (latches)',
+  RESET: 'Reset a BOOL variable / switch an entity or a whole room OFF while IN is TRUE',
+  TOGGLE: 'Flip a BOOL variable / an entity or a whole room between ON and OFF on every rising edge of IN',
+};
+const coil = (type: 'SET' | 'RESET' | 'TOGGLE'): BlockDef<{ prev: boolean }> => ({
   type, category: 'Variables & I/O',
-  description: type === 'SET' ? 'Set a BOOL variable / switch an entity or a whole room ON while IN is TRUE (latches)' : 'Reset a BOOL variable / switch an entity or a whole room OFF while IN is TRUE',
+  description: COIL_TEXT[type],
   inputs: () => [pin('IN', 'BOOL')], outputs: () => [],
   init: () => ({ prev: false }),
   validate: (p, program) => (p.target === 'room'
@@ -142,17 +149,19 @@ const coil = (type: 'SET' | 'RESET'): BlockDef<{ prev: boolean }> => ({
       : varCheck({ ...p, varType: 'BOOL' }, program)),
   exec(i, s, ctx) {
     const on = toBool(i.IN);
-    const value = type === 'SET';
+    const rising = on && !s.prev;
+    s.prev = on;
+    const skip = ctx.firstScan && !ctx.writeOnFirstScan;
     if (ctx.params.target === 'room') {
-      const skip = ctx.firstScan && !ctx.writeOnFirstScan;
-      if (on && !s.prev && !skip) ctx.emit({ kind: 'area', blockId: ctx.blockId, ...areaTarget(ctx.params), domains: areaDomains(ctx.params), action: value ? 'turn_on' : 'turn_off' });
-      s.prev = on;
+      if (rising && !skip) ctx.emit({ kind: 'area', blockId: ctx.blockId, ...areaTarget(ctx.params), domains: areaDomains(ctx.params), action: type === 'TOGGLE' ? 'toggle' : type === 'SET' ? 'turn_on' : 'turn_off' });
     } else if (ctx.params.target === 'entity') {
-      const skip = ctx.firstScan && !ctx.writeOnFirstScan;
-      if (on && !s.prev && !skip) ctx.emit({ kind: 'switch', blockId: ctx.blockId, entityId: String(ctx.params.entityId), value });
-      s.prev = on;
+      const entityId = String(ctx.params.entityId);
+      const value = type === 'TOGGLE' ? !isOnState(entityId, ctx.io.getEntity(entityId)?.state) : type === 'SET';
+      if (rising && !skip) ctx.emit({ kind: 'switch', blockId: ctx.blockId, entityId, value });
+    } else if (type === 'TOGGLE') {
+      if (rising) ctx.writeVar(String(ctx.params.name), !toBool(ctx.readVar(String(ctx.params.name))));
     } else if (on) {
-      ctx.writeVar(String(ctx.params.name), value);
+      ctx.writeVar(String(ctx.params.name), type === 'SET');
     }
   },
 });
@@ -221,4 +230,4 @@ const EVENT_OUT: BlockDef<{ prev: boolean }> = {
   },
 };
 
-export const ioBlocks: BlockDef[] = [CONST, ENTITY_IN, ENTITY_OUT, VAR_READ, VAR_WRITE, coil('SET'), coil('RESET'), EVENT_IN, EVENT_OUT];
+export const ioBlocks: BlockDef[] = [CONST, ENTITY_IN, ENTITY_OUT, VAR_READ, VAR_WRITE, coil('SET'), coil('RESET'), coil('TOGGLE'), EVENT_IN, EVENT_OUT];

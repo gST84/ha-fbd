@@ -1,6 +1,6 @@
 import { AREA_DOMAINS, ATTRIBUTES, attributesOf, domainOf, parseNumber, registry, type PinType, type Program } from '@ha-fbd/engine';
 import { JsonField, SelectField, TextField } from './fields';
-import { DAY_NAMES, layout } from './geometry';
+import { DAY_NAMES, layout, isCoil } from './geometry';
 import type { Edit } from './history';
 import { deleteBlock, deleteBlocks, deleteWire, setParams } from './ops';
 import type { AreaInfo, EntityInfo, FloorInfo, Problem, Selection } from './types';
@@ -72,7 +72,7 @@ export function Properties({ program, selection, entities, problems, areas, floo
   const boolVars = program.variables.filter(v => v.type === 'BOOL');
 
   /** Room (area) or zone (floor) target of SET / RESET: pick where, and which kinds of devices it affects. */
-  const roomFields = (isSet: boolean) => {
+  const roomFields = (effect: string) => {
     const areaId = str('areaId'), floorId = str('floorId');
     const domains = Array.isArray(params.domains) ? (params.domains as string[]) : ['light', 'media_player'];
     const area = areas.find(a => a.id === areaId);
@@ -116,7 +116,7 @@ export function Properties({ program, selection, entities, problems, areas, floo
           {affected.length === 0 ? `No matching devices in this ${floor ? 'zone' : 'room'} right now.` : `${affected.length} device${affected.length === 1 ? '' : 's'} in “${(floor ?? area)!.name}”: `}
           {affected.slice(0, 12).join(', ')}{affected.length > 12 ? ` … +${affected.length - 12} more` : ''}
         </p>)}
-      <p className="hint">{isSet ? 'Switches everything ON' : 'Switches everything OFF'} when IN rises. Home Assistant looks up the devices of the {floor ? 'zone (all its rooms)' : 'room'} itself, so devices you add later are included.</p>
+      <p className="hint">{effect} when IN rises. Home Assistant looks up the devices of the {floor ? 'zone (all its rooms)' : 'room'} itself, so devices you add later are included.</p>
     </>;
   };
 
@@ -173,20 +173,20 @@ export function Properties({ program, selection, entities, problems, areas, floo
             options={[{ value: '', label: '— select —' }, ...program.variables.map(v => ({ value: v.name, label: `${v.name} (${v.type})` }))]}
             onChange={v => { const decl = program.variables.find(x => x.name === v); commit({ name: v, varType: decl?.type ?? 'BOOL' }); }} />)}
 
-      {(b.type === 'SET' || b.type === 'RESET') && <>
+      {isCoil(b.type) && <>
         <SelectField label="Target" testId="p-target" value={str('target') || 'variable'}
-          options={[{ value: 'variable', label: 'BOOL variable (latches)' }, { value: 'entity', label: 'Home Assistant entity (on rising edge)' }, { value: 'room', label: 'Room / zone (on rising edge)' }]}
+          options={[{ value: 'variable', label: b.type === 'TOGGLE' ? 'BOOL variable (flips on rising edge)' : 'BOOL variable (latches)' }, { value: 'entity', label: 'Home Assistant entity (on rising edge)' }, { value: 'room', label: 'Room / zone (on rising edge)' }]}
           onChange={v => commit(v === 'entity' ? { target: 'entity', name: undefined, varType: undefined, areaId: undefined, floorId: undefined, domains: undefined }
             : v === 'room' ? { target: 'room', name: undefined, varType: undefined, entityId: undefined, areaId: '', floorId: undefined, domains: ['light', 'media_player'] }
             : { target: 'variable', entityId: undefined, areaId: undefined, floorId: undefined, domains: undefined, name: boolVars[0]?.name ?? '', varType: 'BOOL' })} />
-        {str('target') === 'room' ? roomFields(b.type === 'SET') : (str('target') || 'variable') === 'variable'
+        {str('target') === 'room' ? roomFields(b.type === 'SET' ? 'Switches everything ON' : b.type === 'RESET' ? 'Switches everything OFF' : 'Switches everything OFF when something is on, otherwise everything ON,') : (str('target') || 'variable') === 'variable'
           ? (boolVars.length === 0
             ? <p className="error">Declare a BOOL variable first (Variables tab).</p>
             : <SelectField label="Variable" testId="p-var" value={str('name')}
                 options={[{ value: '', label: '— select —' }, ...boolVars.map(v => ({ value: v.name, label: v.name }))]}
                 onChange={v => commit({ name: v, varType: 'BOOL' })} />)
           : <TextField label="Entity" testId="p-entity" value={str('entityId')} list="fbd-entities" placeholder="light.living_room"
-              beginTx={beginTx} onChange={v => typing({ entityId: v.trim() })} hint={entityHint ?? (b.type === 'SET' ? 'Turned ON when IN rises' : 'Turned OFF when IN rises')} />}
+              beginTx={beginTx} onChange={v => typing({ entityId: v.trim() })} hint={entityHint ?? (b.type === 'SET' ? 'Turned ON when IN rises' : b.type === 'RESET' ? 'Turned OFF when IN rises' : 'Switched to the other state when IN rises')} />}
       </>}
 
       {b.type === 'EVENT_IN' && <>

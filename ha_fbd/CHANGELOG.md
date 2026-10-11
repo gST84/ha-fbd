@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.6
+- New **TOGGLE** block next to SET / RESET: on every rising edge of IN it flips a BOOL variable, switches an entity to the other state, or switches a whole room / zone off when something is on and otherwise on.
+
 ## 0.7.5
 - New **MOVE** block (palette section *Selection*): copies IN to OUT while EN is TRUE and holds the last value while EN is FALSE. Works with any data type; EN is TRUE by default.
 

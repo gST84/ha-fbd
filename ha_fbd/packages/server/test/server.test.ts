@@ -264,6 +264,24 @@ test('host: a room command becomes one service call per device kind with an area
   await host.stop();
 });
 
+test('host: TOGGLE on a room switches everything off when something is on, otherwise on', async () => {
+  const ha = new FakeHA(); ha.set('input_boolean.btn', 'off'); ha.set('light.sofa', 'off'); ha.set('media_player.tv', 'playing');
+  const host = mkHost(ha, new Store(tmp()));
+  await host.init();
+  const room: Program = { version: 1, name: 'Toggle', variables: [], networks: [{ id: 'n', title: '',
+    blocks: [{ id: 'i', type: 'ENTITY_IN', params: { entityId: 'input_boolean.btn', dataType: 'BOOL' } },
+      { id: 't', type: 'TOGGLE', params: { target: 'room', areaId: 'living_room', domains: ['light', 'media_player'] } }],
+    wires: [{ from: { block: 'i', pin: 'OUT' }, to: { block: 't', pin: 'IN' } }] }] };
+  await host.deploy(room);
+  const press = async (n: number) => { ha.set('input_boolean.btn', 'on'); await waitFor(() => ha.calls.length >= n, 2000, `${n} calls`); ha.set('input_boolean.btn', 'off'); await sleep(80); };
+  await press(2);
+  assert.deepEqual(ha.calls.map(c => [c.domain, c.service, c.target]), [['light', 'turn_off', { area_id: 'living_room' }], ['media_player', 'turn_off', { area_id: 'living_room' }]], 'the TV was on');
+  ha.set('media_player.tv', 'off');
+  await press(4);
+  assert.deepEqual(ha.calls.slice(2).map(c => c.service), ['turn_on', 'turn_on'], 'everything was off');
+  await host.stop();
+});
+
 test('host: a zone (floor) command targets floor_id', async () => {
   const ha = new FakeHA();
   const host = mkHost(ha, new Store(tmp()));
