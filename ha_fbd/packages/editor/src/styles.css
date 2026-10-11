@@ -79,6 +79,7 @@ input.invalid, textarea.invalid { border-color: var(--bad); }
 .block .head { fill: var(--head); } .block.io .head { fill: var(--io); } .block.var .head { fill: var(--var); } .block.seq .head { fill: var(--seq); }
 .block.live-on .body { stroke: var(--live); stroke-width: 3; }
 .block.sel .body { stroke: var(--acc); stroke-width: 2.5; } .block.err .body { stroke: var(--bad); stroke-width: 2.5; }
+.block .domain-icon { fill: var(--mut); overflow: visible; } .block.live-on .domain-icon { fill: var(--fg); }
 .block .title { fill: #fff; font-size: 12px; font-weight: 600; } .block .sub { fill: #ffffffd9; font-size: 10px; }
 .plabel { font-size: 11px; fill: var(--fg); } .cval { font-size: 10px; fill: var(--mut); font-style: italic; }
 .live { font-size: 11px; font-weight: 600; } .live.t { fill: var(--ok); } .live.f { fill: var(--mut); } .live.n { fill: var(--acc); }

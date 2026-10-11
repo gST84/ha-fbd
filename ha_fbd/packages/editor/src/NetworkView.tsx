@@ -1,7 +1,8 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent, PointerEvent as RPE } from 'react';
 import { accepts, familyOf, registry, type BlockInst, type Network, type PinRef, type PinType, type Value } from '@ha-fbd/engine';
-import { GRID, HEADER, MIN_X, ROW, layout, pinY, wirePath } from './geometry';
+import { GRID, HEADER, MIN_X, ROW, layout, pinY, wirePath, switchedDomains } from './geometry';
+import { DomainIcon, hasDomainIcon } from './DomainIcon';
 import type { Edit } from './history';
 import { addWire, moveBlocks } from './ops';
 import type { ContextInfo, Selection } from './types';
@@ -246,6 +247,7 @@ function NetworkViewImpl(props: NetworkProps) {
               else { const src = in0 && driver.get(`${b.id}.${in0.name}`); on = !!src && in0.type === 'BOOL' && values[src] === true; }
             }
             const switchable = familyOf(b.type).length > 1;
+            const icons = switchedDomains(b).filter(hasDomainIcon);
             const cls = ['block', catClass(b.type), on && 'live-on', sel && 'sel', errorBlocks.has(b.id) && 'err', !l.known && 'unknown'].filter(Boolean).join(' ');
             return (
               <g key={b.id} className={cls} data-block={b.id} transform={`translate(${b.x ?? 0},${b.y ?? 0})`} onPointerDown={e => onBlockDown(e, b)}>
@@ -253,6 +255,8 @@ function NetworkViewImpl(props: NetworkProps) {
                 <path className="head" d={`M0 ${HEADER} V4 Q0 0 4 0 H${l.w - 4} Q${l.w} 0 ${l.w} 4 V${HEADER} Z`} />
                 <text className="title" x={l.w / 2} y={l.subtitle ? 13 : 19} textAnchor="middle">{l.title}{switchable ? ' ▾' : ''}</text>
                 {l.subtitle && <text className="sub" x={l.w / 2} y={25} textAnchor="middle">{trunc(l.subtitle, Math.floor((l.w - 12) / 6))}</text>}
+
+                {icons.map((d, i) => <DomainIcon key={d} domain={d} x={l.w - 8 - (icons.length - i) * 17 + 3} y={HEADER + ROW / 2 - 7} />)}
 
                 {l.ins.map((p, i) => {
                   const y = HEADER + ROW * i + ROW / 2;

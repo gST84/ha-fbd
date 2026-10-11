@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.4
+- SET / RESET blocks show small icons for what they switch: lights, media players, switches, fans, climate (the chosen kinds for a room or zone, or the kind of the single entity).
+
 ## 0.7.3
 - SET / RESET blocks that switch a room or zone show its Home Assistant **name** on the block instead of the internal id.
 

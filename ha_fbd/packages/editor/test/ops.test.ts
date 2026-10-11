@@ -5,7 +5,7 @@ import {
   addBlock, addNetwork, addVariable, addWire, deleteBlock, deleteNetwork, deleteVariable, deleteWire,
   emptyProgram, migrateLegacy, moveBlock, moveNetwork, setParams, updateVariable,
 } from '../src/ops';
-import { findFreeSpot, layout, setPlaceNames, wirePath } from '../src/geometry';
+import { findFreeSpot, layout, setPlaceNames, switchedDomains, wirePath } from '../src/geometry';
 
 const NET = 'net_1';
 
@@ -219,6 +219,10 @@ test('time-of-day and room blocks: sensible defaults that compile once the room 
   const ok = setParams(room, NET, r.id, { areaId: 'living_room' });
   assert.equal(compileProgram(ok).errors.length, 0);
   assert.equal(layout(ok.networks[0].blocks[0]).subtitle, 'living room');
+  assert.deepEqual(switchedDomains(ok.networks[0].blocks[0]), ['light', 'media_player'], 'icons for what the room block switches');
+  assert.deepEqual(switchedDomains(setParams(ok, NET, r.id, { domains: ['climate', 'light'] }).networks[0].blocks[0]), ['light', 'climate']);
+  assert.deepEqual(switchedDomains({ id: 's', type: 'SET', params: { target: 'entity', entityId: 'switch.pump' } }), ['switch']);
+  assert.deepEqual(switchedDomains({ id: 's', type: 'SET', params: { target: 'variable', name: 'x' } }), []);
   const v = setPlaceNames([{ id: 'living_room', name: 'Woonkamer' }], [{ id: 'd6b50c27', name: 'Raam' }]);
   assert.equal(layout(ok.networks[0].blocks[0]).subtitle, 'Woonkamer', 'rooms show their Home Assistant name');
   const zone = setParams(ok, NET, r.id, { areaId: undefined, floorId: 'd6b50c27' });

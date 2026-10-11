@@ -1,4 +1,4 @@
-import { registry, type BlockInst, type PinDef } from '@ha-fbd/engine';
+import { AREA_DOMAINS, domainOf, registry, type BlockInst, type PinDef } from '@ha-fbd/engine';
 
 export const GRID = 20;
 export const HEADER = 30;
@@ -53,6 +53,18 @@ export function subtitleOf(b: BlockInst): string {
     case 'CONST': return String(p.value ?? '');
     default: return '';
   }
+}
+
+/** The kinds of devices a block switches (drawn as small icons on the block): the room's domains, or the entity's own domain. */
+export function switchedDomains(b: BlockInst): string[] {
+  const p = b.params ?? {};
+  const room = b.type === 'AREA_OUT' || ((b.type === 'SET' || b.type === 'RESET') && p.target === 'room');
+  if (room) {
+    const chosen = Array.isArray(p.domains) ? (p.domains as unknown[]).map(String) : ['light', 'media_player'];
+    return AREA_DOMAINS.filter(d => chosen.includes(d));
+  }
+  if ((b.type === 'SET' || b.type === 'RESET') && p.target === 'entity' && p.entityId) return [domainOf(p.entityId)];
+  return [];
 }
 
 export function layout(b: BlockInst): Layout {
